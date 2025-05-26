@@ -121,6 +121,57 @@ remove-dep: ## 移除依赖 (用法: make remove-dep DEP=requests)
 show-deps: ## 显示依赖树
 	uv tree
 
+# 扩展功能开发
+setup-multi-ai: ## 设置多 AI API 支持
+	uv run scripts/setup_multi_ai.py
+
+test-ai-providers: ## 测试所有 AI 提供商连接
+	uv run scripts/setup_multi_ai.py
+
+setup-web-dev: ## 设置 Web 开发环境
+	uv add fastapi uvicorn jinja2 python-multipart
+	uv add --dev pytest-asyncio httpx
+
+setup-database: ## 设置数据库支持
+	uv add sqlalchemy asyncpg alembic
+	uv add --dev pytest-postgresql
+
+setup-recommendation: ## 设置推荐系统依赖
+	uv add scikit-learn numpy pandas transformers
+	uv add --dev jupyter notebook
+
+setup-graph-analysis: ## 设置图分析依赖
+	uv add networkx pyvis matplotlib plotly
+	uv add --dev graphviz
+
+setup-mobile-dev: ## 设置移动端开发环境
+	@echo "请参考 EXTENSION_ROADMAP.md 中的移动端开发指南"
+	@echo "需要安装 React Native CLI 和相关工具"
+
+# 扩展功能测试
+test-recommendation: ## 测试推荐系统
+	uv run scripts/test_recommendation.py
+
+test-trend-analysis: ## 测试趋势分析
+	uv run scripts/test_trend_analysis.py
+
+test-graph-builder: ## 测试图谱构建
+	uv run scripts/test_graph_builder.py
+
+# 开发环境设置
+setup-full-dev: setup-multi-ai setup-web-dev setup-database setup-recommendation setup-graph-analysis ## 设置完整开发环境
+
+# 扩展功能部署
+deploy-web: ## 部署 Web 界面
+	@echo "构建 Web 应用..."
+	cd web && npm run build
+	@echo "部署到 GitHub Pages..."
+
+deploy-api: ## 部署 API 服务
+	@echo "构建 API 容器..."
+	docker build -t arxiv-tracker-api .
+	@echo "部署 API 服务..."
+
 # 性能和缓存
 cache-info: ## 显示缓存信息
 	@echo "缓存目录:"

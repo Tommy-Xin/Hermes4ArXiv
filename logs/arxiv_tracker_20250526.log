@@ -14,3 +14,21 @@
 2025-05-26 16:03:55 - arxiv_tracker - INFO - 已下载到 /tmp/tmp2j2m_sei/2401.0001.pdf
 2025-05-26 16:03:55 - arxiv_tracker - INFO - 已删除PDF文件: /tmp/tmp55go2lba/test.pdf
 2025-05-26 16:03:55 - arxiv_tracker - INFO - 关键词过滤后剩余1篇论文
+2025-05-26 16:55:13 - arxiv_tracker - INFO - 正在搜索论文，查询条件: (cat:cs.AI) AND submittedDate:[20250524000000 TO 20250526235959]
+2025-05-26 16:55:13 - arxiv_tracker - INFO - 找到3篇符合条件的论文
+2025-05-26 16:55:13 - arxiv_tracker - INFO - 正在下载: Test Paper: A Novel Approach to Testing
+2025-05-26 16:55:13 - arxiv_tracker - INFO - 已下载到 /tmp/tmpb8dzqpbk/2401.0001.pdf
+2025-05-26 16:55:13 - arxiv_tracker - INFO - 已删除PDF文件: /tmp/tmpjyf3_m00/test.pdf
+2025-05-26 16:55:13 - arxiv_tracker - INFO - 关键词过滤后剩余1篇论文
+2025-05-26 17:03:53 - arxiv_tracker - INFO - 正在搜索论文，查询条件: (cat:cs.AI) AND submittedDate:[20250524000000 TO 20250526235959]
+2025-05-26 17:03:53 - arxiv_tracker - INFO - 找到3篇符合条件的论文
+2025-05-26 17:03:53 - arxiv_tracker - INFO - 正在下载: Test Paper: A Novel Approach to Testing
+2025-05-26 17:03:53 - arxiv_tracker - INFO - 已下载到 /tmp/tmp9420u92j/2401.0001.pdf
+2025-05-26 17:03:53 - arxiv_tracker - INFO - 已删除PDF文件: /tmp/tmpjxu858wq/test.pdf
+2025-05-26 17:03:53 - arxiv_tracker - INFO - 关键词过滤后剩余1篇论文
+2025-05-26 17:18:38 - arxiv_tracker - INFO - 正在搜索论文，查询条件: (cat:cs.AI) AND submittedDate:[20250524000000 TO 20250526235959]
+2025-05-26 17:18:38 - arxiv_tracker - INFO - 找到3篇符合条件的论文
+2025-05-26 17:18:38 - arxiv_tracker - INFO - 正在下载: Test Paper: A Novel Approach to Testing
+2025-05-26 17:18:38 - arxiv_tracker - INFO - 已下载到 /tmp/tmp94he0h8q/2401.0001.pdf
+2025-05-26 17:18:38 - arxiv_tracker - INFO - 已删除PDF文件: /tmp/tmpg0wc9f2_/test.pdf
+2025-05-26 17:18:38 - arxiv_tracker - INFO - 关键词过滤后剩余1篇论文

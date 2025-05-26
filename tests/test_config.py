@@ -41,15 +41,16 @@ class TestConfig:
 
     def test_create_directories(self, temp_dir, mock_env_vars):
         """测试目录创建"""
-        with patch.object(Config, "BASE_DIR", temp_dir):
-            config = Config()
-            config.PAPERS_DIR = temp_dir / "papers"
-            config.TEMPLATES_DIR = temp_dir / "templates"
+        config = Config()
+        # 直接设置临时目录路径
+        config.BASE_DIR = temp_dir
+        config.PAPERS_DIR = temp_dir / "papers"
+        config.TEMPLATES_DIR = temp_dir / "templates"
 
-            config.create_directories()
+        config.create_directories()
 
-            assert config.PAPERS_DIR.exists()
-            assert config.TEMPLATES_DIR.exists()
+        assert config.PAPERS_DIR.exists()
+        assert config.TEMPLATES_DIR.exists()
 
     def test_multiple_email_recipients(self, mock_env_vars):
         """测试多个邮件收件人"""
