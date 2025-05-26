@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArXiv论文分析报告</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .header .date {
+            margin-top: 10px;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .summary {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .paper {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            transition: box-shadow 0.3s ease;
+        }
+        
+        .paper:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .paper-header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .paper-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0 0 10px 0;
+            line-height: 1.4;
+        }
+        
+        .paper-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .paper-meta .meta-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .paper-meta .meta-label {
+            font-weight: 600;
+            margin-right: 5px;
+        }
+        
+        .paper-content {
+            padding: 20px;
+        }
+        
+        .analysis-section {
+            margin-bottom: 20px;
+        }
+        
+        .analysis-section h4 {
+            color: #495057;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .analysis-section p {
+            margin: 0;
+            color: #6c757d;
+            line-height: 1.6;
+        }
+        
+        .paper-link {
+            display: inline-block;
+            background-color: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 15px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .paper-link:hover {
+            background-color: #5a6fd8;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .categories {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .category-tag {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .paper-meta {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 ArXiv论文分析报告</h1>
+            <div class="date">{{ date }}</div>
+        </div>
+        
+        <div class="content">
+            <div class="summary">
+                <h3 style="margin: 0 0 10px 0; color: #495057;">📊 今日概览</h3>
+                <p style="margin: 0; color: #6c757d;">
+                    今日共分析了 <strong>{{ paper_count }}</strong> 篇论文，涵盖 {{ categories }} 等领域的最新研究进展。
+                </p>
+            </div>
+            
+            {% for paper_data in papers %}
+            <div class="paper">
+                <div class="paper-header">
+                    <h2 class="paper-title">{{ paper_data.title }}</h2>
+                    <div class="paper-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">👥 作者:</span>
+                            <span>{{ paper_data.authors }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">📅 发布:</span>
+                            <span>{{ paper_data.published }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">🏷️ 类别:</span>
+                            <div class="categories">
+                                {% for category in paper_data.categories %}
+                                <span class="category-tag">{{ category }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="paper-content">
+                    {{ paper_data.analysis | safe }}
+                    <a href="{{ paper_data.url }}" class="paper-link" target="_blank">
+                        🔗 查看原文
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="footer">
+            <p>
+                🤖 本报告由 ArXiv论文追踪器 自动生成<br>
+                ⏰ 生成时间: {{ date }}<br>
+                💡 如有问题或建议，请联系管理员
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

@@ -1,0 +1,78 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        enable-cache: true
+    
+    - name: Set up Python
+      run: uv python install 3.12
+    
+    - name: Install dependencies
+      run: uv sync --all-extras --dev
+    
+    - name: Run Black (formatting check)
+      run: uv run black --check --diff src tests
+    
+    - name: Run isort (import sorting check)
+      run: uv run isort --check-only --diff src tests
+    
+    - name: Run flake8 (linting)
+      run: uv run flake8 src tests --statistics
+    
+    - name: Run mypy (type checking)
+      run: uv run mypy src --show-error-codes
+    
+    - name: Check for security issues with bandit
+      run: |
+        uv add --dev bandit[toml]
+        uv run bandit -r src -f json -o bandit-report.json || true
+        uv run bandit -r src
+    
+    - name: Upload bandit report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: bandit-report
+        path: bandit-report.json
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        enable-cache: true
+    
+    - name: Check for dependency vulnerabilities
+      run: |
+        uv add --dev safety
+        uv run safety check --json --output safety-report.json || true
+        uv run safety check
+    
+    - name: Upload safety report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: safety-report
+        path: safety-report.json 

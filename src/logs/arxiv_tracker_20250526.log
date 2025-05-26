@@ -1,0 +1,9 @@
+2025-05-26 15:55:36 - arxiv_tracker - INFO - 正在搜索论文，查询条件: (cat:cs.AI) AND submittedDate:[20250519000000 TO 20250526235959]
+2025-05-26 15:55:39 - arxiv_tracker - INFO - 找到3篇符合条件的论文
+2025-05-26 15:55:39 - arxiv_tracker - ERROR - 邮件配置不完整
+2025-05-26 16:04:03 - arxiv_tracker - INFO - 正在搜索论文，查询条件: (cat:cs.AI) AND submittedDate:[20250519000000 TO 20250526235959]
+2025-05-26 16:04:11 - arxiv_tracker - INFO - 找到3篇符合条件的论文
+2025-05-26 16:04:11 - arxiv_tracker - ERROR - 邮件配置不完整
+2025-05-26 16:09:14 - arxiv_tracker - INFO - 正在搜索论文，查询条件: (cat:cs.AI) AND submittedDate:[20250519000000 TO 20250526235959]
+2025-05-26 16:09:16 - arxiv_tracker - INFO - 找到3篇符合条件的论文
+2025-05-26 16:09:16 - arxiv_tracker - ERROR - 邮件配置不完整

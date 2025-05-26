@@ -2,35 +2,45 @@ name: Daily Paper Analysis
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天 UTC 时间 00:00 运行
+    - cron: '0 0 * * *'  # 每天 UTC 时间 00:00 运行（北京时间 08:00）
   workflow_dispatch:  # 允许手动触发
 
 jobs:
   analyze-papers:
     runs-on: ubuntu-latest
-    timeout-minutes: 60  # 设置超时时间为5分钟
+    timeout-minutes: 60  # 设置超时时间为60分钟
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        enable-cache: true
     
     - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-        cache: 'pip'  # 启用pip缓存
+      run: uv python install 3.12
     
     - name: Cache papers directory
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
-        path: papers
-        key: ${{ runner.os }}-papers-${{ hashFiles('**/requirements.txt') }}
+        path: src/papers
+        key: ${{ runner.os }}-papers-${{ hashFiles('**/uv.lock') }}
         restore-keys: |
           ${{ runner.os }}-papers-
     
     - name: Install dependencies
+      run: uv sync --frozen
+    
+    - name: Create necessary directories
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        mkdir -p src/papers
+        mkdir -p src/templates
+        mkdir -p src/logs
     
     - name: Run paper analysis
       env:
@@ -43,12 +53,36 @@ jobs:
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
       run: |
         cd src
-        python main.py
+        uv run python main.py
+    
+    - name: Upload logs as artifacts
+      if: always()  # 即使失败也上传日志
+      uses: actions/upload-artifact@v3
+      with:
+        name: logs
+        path: src/logs/
+        retention-days: 7
     
     - name: Commit and push changes
       run: |
-        git config --global user.name 'curryfromuestc'
-        git config --global user.email 'curryfromuestc@gmail.com'
-        git add .
-        git commit -m "Update paper analysis for $(date +'%Y-%m-%d')" || echo "No changes to commit"
-        git push 
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add src/conclusion.md
+        git add src/logs/
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "📚 Update paper analysis for $(date +'%Y-%m-%d')"
+          git push
+        fi
+    
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "工作流执行失败，请检查日志"
+        echo "失败时间: $(date)"
+        echo "可能的原因："
+        echo "1. API密钥无效或余额不足"
+        echo "2. 邮件配置错误"
+        echo "3. 网络连接问题"
+        echo "4. ArXiv服务不可用" 
