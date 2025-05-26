@@ -1,0 +1,155 @@
+name: 🚀 一键设置 ArXiv 论文追踪器
+
+on:
+  workflow_dispatch:
+    inputs:
+      setup_type:
+        description: '设置类型'
+        required: true
+        default: 'check_secrets'
+        type: choice
+        options:
+        - check_secrets
+        - test_configuration
+        - run_analysis
+
+jobs:
+  setup-guide:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📋 检查配置状态
+      run: |
+        echo "🔍 检查必需的 Secrets 配置状态..."
+        echo ""
+        
+        # 检查必需的 Secrets
+        secrets_status=""
+        
+        if [ -z "${{ secrets.DEEPSEEK_API_KEY }}" ]; then
+          echo "❌ DEEPSEEK_API_KEY: 未配置"
+          secrets_status="missing"
+        else
+          echo "✅ DEEPSEEK_API_KEY: 已配置"
+        fi
+        
+        if [ -z "${{ secrets.SMTP_SERVER }}" ]; then
+          echo "❌ SMTP_SERVER: 未配置"
+          secrets_status="missing"
+        else
+          echo "✅ SMTP_SERVER: 已配置"
+        fi
+        
+        if [ -z "${{ secrets.SMTP_USERNAME }}" ]; then
+          echo "❌ SMTP_USERNAME: 未配置"
+          secrets_status="missing"
+        else
+          echo "✅ SMTP_USERNAME: 已配置"
+        fi
+        
+        if [ -z "${{ secrets.SMTP_PASSWORD }}" ]; then
+          echo "❌ SMTP_PASSWORD: 未配置"
+          secrets_status="missing"
+        else
+          echo "✅ SMTP_PASSWORD: 已配置"
+        fi
+        
+        if [ -z "${{ secrets.EMAIL_FROM }}" ]; then
+          echo "❌ EMAIL_FROM: 未配置"
+          secrets_status="missing"
+        else
+          echo "✅ EMAIL_FROM: 已配置"
+        fi
+        
+        if [ -z "${{ secrets.EMAIL_TO }}" ]; then
+          echo "❌ EMAIL_TO: 未配置"
+          secrets_status="missing"
+        else
+          echo "✅ EMAIL_TO: 已配置"
+        fi
+        
+        echo ""
+        if [ "$secrets_status" = "missing" ]; then
+          echo "⚠️  发现缺少的配置项！"
+          echo ""
+          echo "📝 配置步骤："
+          echo "1. 进入仓库 Settings → Secrets and variables → Actions"
+          echo "2. 点击 'New repository secret'"
+          echo "3. 添加以下 Secrets："
+          echo "   - DEEPSEEK_API_KEY: 您的 DeepSeek API 密钥"
+          echo "   - SMTP_SERVER: 邮件服务器 (如: smtp.qq.com)"
+          echo "   - SMTP_USERNAME: 邮箱账号"
+          echo "   - SMTP_PASSWORD: 邮箱授权码"
+          echo "   - EMAIL_FROM: 发件人邮箱"
+          echo "   - EMAIL_TO: 收件人邮箱"
+          echo ""
+          echo "📖 详细配置指南: https://github.com/${{ github.repository }}/blob/main/SECRETS_SETUP_GUIDE.md"
+          exit 1
+        else
+          echo "🎉 所有必需的 Secrets 都已配置完成！"
+        fi
+
+  test-configuration:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.setup_type == 'test_configuration'
+    needs: setup-guide
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: 🐍 设置 Python 环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: 📦 安装 uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+    
+    - name: 🔧 安装依赖
+      run: uv sync --frozen
+    
+    - name: 🔍 验证配置
+      env:
+        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+        EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      run: |
+        echo "🔍 运行配置验证..."
+        uv run scripts/validate_env.py
+
+  run-test-analysis:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.setup_type == 'run_analysis'
+    needs: setup-guide
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: 🐍 设置 Python 环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: 📦 安装 uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+    
+    - name: 🔧 安装依赖
+      run: uv sync --frozen
+    
+    - name: 🧪 运行测试分析
+      env:
+        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+        EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        MAX_PAPERS: 3  # 测试时只分析3篇论文
+        SEARCH_DAYS: 1
+      run: |
+        echo "🚀 运行测试分析（少量论文）..."
+        cd src && uv run python main.py 

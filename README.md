@@ -57,9 +57,31 @@ arxiv_paper_tracker/
 └── README.md
 ```
 
-## 🚀 安装与配置
+## 🔐 安全保障
 
-### 1. 克隆仓库
+### ✅ 您的密钥完全安全
+- **GitHub Secrets 企业级加密**: 密钥在 GitHub 服务器上加密存储
+- **完全私有**: 只有您能设置和查看这些密钥
+- **日志自动屏蔽**: 密钥值在日志中自动显示为 `***`
+- **Fork 隔离**: 其他人 Fork 您的项目时不会获得您的密钥
+
+### 🚫 其他人无法访问您的配置
+- 其他人使用此项目需要配置**自己的密钥**
+- 您的 API 费用和邮箱完全私有
+- 代码开源，配置私有
+
+## 🚀 快速部署（推荐）
+
+### 方式一: 一键部署到 GitHub Actions
+1. **Fork 此仓库** 到您的 GitHub 账号
+2. **配置 Secrets**: Settings → Secrets and variables → Actions
+3. **运行设置向导**: Actions → 🚀 一键设置 ArXiv 论文追踪器
+
+详细步骤请查看：[📖 用户部署指南](DEPLOY_FOR_USERS.md)
+
+### 方式二: 本地开发
+
+#### 1. 克隆仓库
 ```bash
 git clone https://github.com/你的用户名/arxiv_paper_tracker.git
 cd arxiv_paper_tracker
