@@ -67,6 +67,9 @@ test-components: ## 运行组件测试
 preview-template: ## 生成HTML邮件模板预览
 	uv run python src/preview_template.py
 
+preview-server: ## 启动HTTP服务器预览邮件模板
+	uv run python src/preview_server.py
+
 pre-commit-install: ## 安装 pre-commit hooks
 	uv run pre-commit install
 
