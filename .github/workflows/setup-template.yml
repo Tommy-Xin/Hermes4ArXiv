@@ -49,7 +49,7 @@ jobs:
           echo "❌ 未配置任何AI API密钥，请至少配置一个AI模型"
           secrets_status="missing"
         else
-          echo "🎯 AI模型配置完成，系统将自动选择最佳可用模型"
+          echo "🎯 AI模型配置完成，系统将使用智能降级策略自动选择最佳可用模型"
         fi
         
         # 检查必需的邮件配置
@@ -102,7 +102,7 @@ jobs:
           echo "   🔬 GEMINI_API_KEY: Gemini 2.5 Pro Preview API密钥"  
           echo "   🧠 OPENAI_API_KEY: OpenAI o3 API密钥"
           echo "   💰 DEEPSEEK_API_KEY: DeepSeek R1 API密钥"
-          echo "   ❗ 提示: 选择任意一个配置即可，系统会自动使用可用的API"
+          echo "   ❗ 提示: 选择任意一个配置即可，系统会按优先级使用，失败时自动切换"
           echo "4. 📧 添加邮件配置 (必需)："
           echo "   - SMTP_SERVER: 邮件服务器 (如: smtp.gmail.com)"
           echo "   - SMTP_USERNAME: 邮箱账号"
@@ -114,7 +114,7 @@ jobs:
           exit 1
         else
           echo "🎉 配置验证成功！AI模型和邮件配置均已就绪"
-          echo "💡 提示: 系统已自动选择最佳可用的AI模型进行分析"
+          echo "💡 提示: 系统将使用智能降级策略，自动处理AI失败并切换到备用模型"
         fi
 
   test-configuration:
@@ -151,9 +151,13 @@ jobs:
         EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
         SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        # 失败处理配置
+        MAX_CONSECUTIVE_FAILURES: ${{ secrets.MAX_CONSECUTIVE_FAILURES }}
+        FAILURE_RESET_TIME: ${{ secrets.FAILURE_RESET_TIME }}
+        AI_FALLBACK_ORDER: ${{ secrets.AI_FALLBACK_ORDER }}
       run: |
         echo "🔍 运行配置验证和测试..."
-        cd scripts && uv run validate_env.py
+        cd scripts && uv run python validate_env.py
 
   run-test-analysis:
     runs-on: ubuntu-latest
@@ -191,6 +195,10 @@ jobs:
         # 测试配置
         MAX_PAPERS: 3  # 测试时只分析3篇论文
         SEARCH_DAYS: 1
+        # 失败处理配置
+        MAX_CONSECUTIVE_FAILURES: ${{ secrets.MAX_CONSECUTIVE_FAILURES }}
+        FAILURE_RESET_TIME: ${{ secrets.FAILURE_RESET_TIME }}
+        AI_FALLBACK_ORDER: ${{ secrets.AI_FALLBACK_ORDER }}
       run: |
         echo "🚀 运行测试分析（少量论文）..."
         cd src && uv run python main.py 

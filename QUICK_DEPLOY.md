@@ -10,9 +10,16 @@
 ### 第2步：配置Secrets
 在您的Fork仓库中，进入 `Settings` → `Secrets and variables` → `Actions`，添加以下配置：
 
-#### 必需配置（5个）
+#### 🤖 AI模型（四选一即可）
 ```
-DEEPSEEK_API_KEY=sk-your-deepseek-api-key-here
+DEEPSEEK_API_KEY=sk-your-deepseek-api-key-here    # 💰 高性价比首选
+CLAUDE_API_KEY=sk-ant-your-claude-key-here        # 🏆 最强推理模型
+GEMINI_API_KEY=your-gemini-key-here               # 🔬 Google最新SOTA
+OPENAI_API_KEY=sk-your-openai-key-here            # 🧠 推理能力王者
+```
+
+#### 📧 邮件配置（必需）
+```
 SMTP_SERVER=smtp.gmail.com
 SMTP_USERNAME=your-email@gmail.com  
 SMTP_PASSWORD=your-app-password
@@ -39,6 +46,7 @@ SEARCH_DAYS=2                   # 搜索最近几天
 ## 🎯 就这么简单！
 
 - ✅ **零服务器成本**：完全基于GitHub Actions
+- ✅ **智能AI切换**：配置多个AI时自动降级，确保成功率
 - ✅ **自动运行**：每天北京时间8点自动分析
 - ✅ **邮件推送**：HTML邮件直达您的邮箱
 
@@ -46,14 +54,15 @@ SEARCH_DAYS=2                   # 搜索最近几天
 ## 🔧 高级配置（可选）
 
 如需自定义更多选项，可在Secrets中添加：
+- `PREFERRED_AI_MODEL`: 指定优先使用的AI（deepseek/claude/gemini/openai）
+- `AI_FALLBACK_ORDER`: 自定义AI降级顺序（默认：deepseek,openai,claude,gemini）
 - `EMAIL_FROM`: 发件人邮箱（默认同SMTP_USERNAME）
 - `ENABLE_PARALLEL`: 是否启用并行处理（默认true）
-- `MAX_WORKERS`: 并行线程数（默认自动计算）
 
 ## 🆘 遇到问题？
 
 1. **邮件发送失败**：检查Gmail应用密码是否正确
-2. **AI分析失败**：检查DeepSeek API密钥和余额
+2. **AI分析失败**：配置多个AI密钥可提高成功率
 3. **没有收到邮件**：检查垃圾邮件文件夹
 
 ---

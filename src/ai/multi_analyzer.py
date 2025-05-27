@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 多AI分析器模块
-支持多个AI提供商的降级策略和并行分析
+支持多个AI提供商的降级策略和失败检测
 """
 
 import asyncio
@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Any
 import arxiv
+from collections import defaultdict
 
 from .prompts import PromptManager
 
@@ -26,12 +27,69 @@ class AIProvider(Enum):
     ZHIPU = "zhipu"  # 智谱AI
 
 
-class AnalysisStrategy(Enum):
-    """分析策略枚举"""
-    FALLBACK = "fallback"      # 降级策略：按顺序尝试
-    PARALLEL = "parallel"      # 并行策略：同时调用多个
-    CONSENSUS = "consensus"    # 共识策略：多个AI达成共识
-    BEST_EFFORT = "best_effort"  # 尽力而为：尝试所有可用的
+class FailureTracker:
+    """失败跟踪器 - 跟踪API连续失败情况"""
+    
+    def __init__(self, max_consecutive_failures: int = 3, reset_time: int = 300):
+        """
+        初始化失败跟踪器
+        
+        Args:
+            max_consecutive_failures: 最大连续失败次数
+            reset_time: 失败计数重置时间（秒）
+        """
+        self.max_consecutive_failures = max_consecutive_failures
+        self.reset_time = reset_time
+        self.failure_counts = defaultdict(int)  # 每个provider的连续失败次数
+        self.last_failure_time = defaultdict(float)  # 最后失败时间
+        self.disabled_providers = set()  # 被禁用的provider
+    
+    def record_failure(self, provider: AIProvider) -> bool:
+        """
+        记录失败
+        
+        Args:
+            provider: AI提供商
+            
+        Returns:
+            是否应该禁用该provider
+        """
+        current_time = time.time()
+        
+        # 检查是否需要重置计数
+        if (provider in self.last_failure_time and 
+            current_time - self.last_failure_time[provider] > self.reset_time):
+            self.failure_counts[provider] = 0
+        
+        self.failure_counts[provider] += 1
+        self.last_failure_time[provider] = current_time
+        
+        # 检查是否达到最大失败次数
+        if self.failure_counts[provider] >= self.max_consecutive_failures:
+            self.disabled_providers.add(provider)
+            logger.warning(f"🚫 {provider.value} 连续失败 {self.failure_counts[provider]} 次，暂时禁用")
+            return True
+        
+        return False
+    
+    def record_success(self, provider: AIProvider):
+        """记录成功，重置失败计数"""
+        self.failure_counts[provider] = 0
+        if provider in self.disabled_providers:
+            self.disabled_providers.remove(provider)
+            logger.info(f"✅ {provider.value} 恢复正常")
+    
+    def is_disabled(self, provider: AIProvider) -> bool:
+        """检查provider是否被禁用"""
+        return provider in self.disabled_providers
+    
+    def get_failure_info(self, provider: AIProvider) -> Dict[str, Any]:
+        """获取失败信息"""
+        return {
+            'consecutive_failures': self.failure_counts.get(provider, 0),
+            'is_disabled': self.is_disabled(provider),
+            'last_failure_time': self.last_failure_time.get(provider, 0)
+        }
 
 
 class BaseAIAnalyzer(ABC):
@@ -125,7 +183,7 @@ class DeepSeekAnalyzer(BaseAIAnalyzer):
             "name": "DeepSeek",
             "provider": "deepseek",
             "model": self.model,
-            "description": "DeepSeek AI - 高性价比的中文AI模型"
+            "description": "DeepSeek - 高性价比AI模型"
         }
 
 
@@ -179,7 +237,7 @@ class OpenAIAnalyzer(BaseAIAnalyzer):
             "name": "OpenAI",
             "provider": "openai",
             "model": self.model,
-            "description": "OpenAI GPT - 业界领先的AI模型"
+            "description": "OpenAI GPT - 业界领先AI模型"
         }
 
 
@@ -205,17 +263,15 @@ class ClaudeAnalyzer(BaseAIAnalyzer):
             try:
                 logger.info(f"Claude分析论文: {paper.title[:50]}... (尝试 {attempt + 1}/{self.retry_times})")
                 
-                response = client.messages.create(
+                message = client.messages.create(
                     model=self.model,
                     max_tokens=1500,
+                    temperature=0.7,
                     system=system_prompt,
-                    messages=[
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    timeout=self.timeout
+                    messages=[{"role": "user", "content": user_prompt}]
                 )
                 
-                analysis = response.content[0].text
+                analysis = message.content[0].text
                 logger.info(f"Claude分析完成: {paper.title[:50]}...")
                 
                 await asyncio.sleep(self.delay)
@@ -234,15 +290,28 @@ class ClaudeAnalyzer(BaseAIAnalyzer):
             "name": "Claude",
             "provider": "claude",
             "model": self.model,
-            "description": "Anthropic Claude - 安全可靠的AI助手"
+            "description": "Anthropic Claude - 安全可靠AI助手"
         }
 
 
 class GeminiAnalyzer(BaseAIAnalyzer):
-    """Gemini分析器"""
+    """Gemini分析器 - 增强版本，支持finish_reason检测"""
+    
+    # Gemini finish_reason 映射
+    FINISH_REASON_MAP = {
+        0: "FINISH_REASON_UNSPECIFIED",
+        1: "STOP",
+        2: "SAFETY",
+        3: "RECITATION", 
+        4: "MAX_TOKENS",
+        5: "OTHER"
+    }
     
     def __init__(self, api_key: str, model: str = "gemini-pro", **kwargs):
         super().__init__(api_key, model, **kwargs)
+        # 针对安全过滤器的特殊处理
+        self.safety_failure_count = 0
+        self.max_safety_failures = 2  # 连续2次安全过滤失败就跳过
     
     async def analyze_paper(self, paper: arxiv.Result, analysis_type: str = "comprehensive") -> Dict[str, Any]:
         """分析论文"""
@@ -264,16 +333,44 @@ class GeminiAnalyzer(BaseAIAnalyzer):
             try:
                 logger.info(f"Gemini分析论文: {paper.title[:50]}... (尝试 {attempt + 1}/{self.retry_times})")
                 
+                # 配置安全设置 - 降低过滤严格程度
+                safety_settings = [
+                    {
+                        "category": "HARM_CATEGORY_HARASSMENT",
+                        "threshold": "BLOCK_NONE"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_HATE_SPEECH", 
+                        "threshold": "BLOCK_NONE"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        "threshold": "BLOCK_NONE"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                        "threshold": "BLOCK_NONE"
+                    }
+                ]
+                
                 response = model.generate_content(
                     full_prompt,
                     generation_config=genai.types.GenerationConfig(
                         max_output_tokens=1500,
                         temperature=0.7,
-                    )
+                    ),
+                    safety_settings=safety_settings
                 )
+                
+                # 检查响应状态
+                if not self._validate_response(response, paper.title):
+                    continue  # 继续下一次尝试
                 
                 analysis = response.text
                 logger.info(f"Gemini分析完成: {paper.title[:50]}...")
+                
+                # 重置安全失败计数
+                self.safety_failure_count = 0
                 
                 await asyncio.sleep(self.delay)
                 
@@ -281,38 +378,98 @@ class GeminiAnalyzer(BaseAIAnalyzer):
                 
             except Exception as e:
                 logger.warning(f"Gemini分析失败 (尝试 {attempt + 1}): {str(e)}")
+                
+                # 检查是否是安全过滤器问题
+                if self._is_safety_issue(str(e)):
+                    self.safety_failure_count += 1
+                    logger.warning(f"Gemini安全过滤器触发 (连续 {self.safety_failure_count} 次)")
+                    
+                    if self.safety_failure_count >= self.max_safety_failures:
+                        logger.error(f"Gemini连续 {self.safety_failure_count} 次触发安全过滤器，建议切换到其他AI")
+                        raise Exception("GEMINI_SAFETY_FILTER_REPEATEDLY_TRIGGERED")
+                
                 if attempt < self.retry_times - 1:
                     await asyncio.sleep(self.delay * (attempt + 1))
                 else:
                     raise e
+    
+    def _validate_response(self, response, paper_title: str) -> bool:
+        """验证Gemini响应状态"""
+        try:
+            # 检查是否有候选结果
+            if not response.candidates:
+                logger.warning(f"Gemini响应无候选结果: {paper_title[:50]}")
+                return False
+            
+            candidate = response.candidates[0]
+            finish_reason = candidate.finish_reason
+            
+            # 获取finish_reason的可读名称
+            reason_name = self.FINISH_REASON_MAP.get(finish_reason, f"UNKNOWN({finish_reason})")
+            
+            if finish_reason == 1:  # STOP - 正常完成
+                return True
+            elif finish_reason == 2:  # SAFETY - 安全过滤器拦截
+                logger.warning(f"Gemini安全过滤器拦截: {paper_title[:50]}, finish_reason: {reason_name}")
+                self.safety_failure_count += 1
+                return False
+            elif finish_reason == 3:  # RECITATION - 重复内容检测
+                logger.warning(f"Gemini重复内容检测: {paper_title[:50]}, finish_reason: {reason_name}")
+                return False
+            elif finish_reason == 4:  # MAX_TOKENS - 达到最大token数
+                logger.warning(f"Gemini达到最大token数: {paper_title[:50]}, finish_reason: {reason_name}")
+                # 虽然没有完整输出，但可能有部分有用内容
+                if hasattr(response, 'text') and response.text:
+                    return True
+                return False
+            else:
+                logger.warning(f"Gemini未知finish_reason: {reason_name}, 论文: {paper_title[:50]}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"验证Gemini响应时出错: {e}")
+            return False
+    
+    def _is_safety_issue(self, error_msg: str) -> bool:
+        """检查是否是安全过滤器相关问题"""
+        safety_keywords = [
+            "finish_reason",
+            "safety",
+            "blocked",
+            "filter",
+            "valid `Part`",
+            "SAFETY"
+        ]
+        error_lower = error_msg.lower()
+        return any(keyword.lower() in error_lower for keyword in safety_keywords)
     
     def get_provider_info(self) -> Dict[str, str]:
         return {
             "name": "Gemini",
             "provider": "gemini",
             "model": self.model,
-            "description": "Google Gemini - 多模态AI模型"
+            "description": "Google Gemini - 多模态AI模型",
+            "safety_failure_count": self.safety_failure_count
         }
 
 
 class MultiAIAnalyzer:
-    """多AI分析器"""
+    """
+    多AI分析器 - 智能降级分析器
+    
+    使用降级策略（fallback）按顺序尝试多个AI提供商，
+    直到找到一个可用的为止。支持智能失败检测和自动禁用。
+    """
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.analyzers: Dict[AIProvider, BaseAIAnalyzer] = {}
-        self.strategy = self._parse_strategy()
         self.fallback_order = self._parse_fallback_order()
+        self.failure_tracker = FailureTracker(
+            max_consecutive_failures=config.get('MAX_CONSECUTIVE_FAILURES', 3),
+            reset_time=config.get('FAILURE_RESET_TIME', 300)
+        )
         self._initialize_analyzers()
-    
-    def _parse_strategy(self) -> AnalysisStrategy:
-        """解析分析策略"""
-        strategy_str = self.config.get('ANALYSIS_STRATEGY', 'fallback').lower()
-        try:
-            return AnalysisStrategy(strategy_str)
-        except ValueError:
-            logger.warning(f"未知的分析策略: {strategy_str}，使用默认策略: fallback")
-            return AnalysisStrategy.FALLBACK
     
     def _parse_fallback_order(self) -> List[AIProvider]:
         """解析使用顺序 - 支持用户指定优先模型"""
@@ -403,12 +560,15 @@ class MultiAIAnalyzer:
         logger.info(f"初始化了 {len(self.analyzers)} 个AI分析器: {list(self.analyzers.keys())}")
     
     def get_available_analyzers(self) -> List[AIProvider]:
-        """获取可用的分析器列表"""
-        return [provider for provider, analyzer in self.analyzers.items() if analyzer.is_available()]
+        """获取可用的分析器列表（排除被禁用的）"""
+        return [
+            provider for provider, analyzer in self.analyzers.items() 
+            if analyzer.is_available() and not self.failure_tracker.is_disabled(provider)
+        ]
     
     async def analyze_paper(self, paper: arxiv.Result, analysis_type: str = "comprehensive") -> Dict[str, Any]:
         """
-        分析论文
+        分析论文 - 使用降级策略
         
         Args:
             paper: 论文对象
@@ -417,35 +577,69 @@ class MultiAIAnalyzer:
         Returns:
             分析结果
         """
-        if self.strategy == AnalysisStrategy.FALLBACK:
-            return await self._analyze_with_fallback(paper, analysis_type)
-        else:
-            return await self._analyze_with_fallback(paper, analysis_type)
+        return await self._analyze_with_fallback(paper, analysis_type)
     
     async def _analyze_with_fallback(self, paper: arxiv.Result, analysis_type: str) -> Dict[str, Any]:
-        """使用降级策略分析论文"""
+        """使用降级策略分析论文 - 增强版本，支持智能跳过失败的AI"""
         last_error = None
+        attempted_providers = []
         
-        for provider in self.fallback_order:
+        # 获取可用的provider列表（排除被禁用的）
+        available_providers = [
+            provider for provider in self.fallback_order
+            if (provider in self.analyzers and 
+                self.analyzers[provider].is_available() and
+                not self.failure_tracker.is_disabled(provider))
+        ]
+        
+        if not available_providers:
+            # 所有provider都被禁用，尝试重置一些失败计数
+            logger.warning("所有AI提供商都被禁用，尝试重置部分失败计数")
+            self._reset_some_failures()
+            available_providers = [
+                provider for provider in self.fallback_order
+                if (provider in self.analyzers and 
+                    self.analyzers[provider].is_available() and
+                    not self.failure_tracker.is_disabled(provider))
+            ]
+        
+        for provider in available_providers:
             analyzer = self.analyzers.get(provider)
-            if not analyzer or not analyzer.is_available():
-                logger.debug(f"跳过不可用的分析器: {provider}")
-                continue
+            attempted_providers.append(provider)
             
             try:
                 logger.info(f"使用 {provider.value} 分析论文: {paper.title[:50]}...")
                 result = await analyzer.analyze_paper(paper, analysis_type)
+                
+                # 记录成功
+                self.failure_tracker.record_success(provider)
                 logger.info(f"✅ {provider.value} 分析成功")
                 return result
                 
             except Exception as e:
                 last_error = e
-                logger.warning(f"❌ {provider.value} 分析失败: {e}")
+                error_msg = str(e)
+                
+                # 记录失败
+                should_disable = self.failure_tracker.record_failure(provider)
+                
+                # 特殊处理Gemini安全过滤器问题
+                if provider == AIProvider.GEMINI and "GEMINI_SAFETY_FILTER_REPEATEDLY_TRIGGERED" in error_msg:
+                    logger.error(f"❌ {provider.value} 多次触发安全过滤器，建议使用其他AI模型")
+                elif should_disable:
+                    logger.warning(f"⚠️ {provider.value} 被暂时禁用，将尝试其他AI")
+                else:
+                    logger.warning(f"❌ {provider.value} 分析失败: {error_msg[:100]}...")
+                
                 continue
         
         # 所有分析器都失败了
-        error_msg = f"所有AI提供商都不可用。最后错误: {last_error}"
+        error_msg = f"所有可用的AI提供商都失败了。尝试过的提供商: {[p.value for p in attempted_providers]}。最后错误: {last_error}"
         logger.error(error_msg)
+        
+        # 生成失败统计
+        failure_stats = self._get_failure_stats()
+        logger.info(f"失败统计: {failure_stats}")
         
         return {
             'analysis': PromptManager.get_error_analysis(str(last_error)),
@@ -453,20 +647,41 @@ class MultiAIAnalyzer:
             'model': 'none',
             'timestamp': time.time(),
             'html_analysis': PromptManager.format_analysis_for_html(PromptManager.get_error_analysis(str(last_error))),
-            'error': str(last_error)
+            'error': str(last_error),
+            'attempted_providers': [p.value for p in attempted_providers],
+            'failure_stats': failure_stats
         }
+    
+    def _reset_some_failures(self):
+        """重置一些失败计数，给AI一次重新尝试的机会"""
+        for provider in self.failure_tracker.disabled_providers.copy():
+            if provider != AIProvider.GEMINI:  # Gemini安全过滤器问题通常是持续性的
+                self.failure_tracker.failure_counts[provider] = max(0, self.failure_tracker.failure_counts[provider] - 1)
+                if self.failure_tracker.failure_counts[provider] < self.failure_tracker.max_consecutive_failures:
+                    self.failure_tracker.disabled_providers.remove(provider)
+                    logger.info(f"🔄 重置 {provider.value} 失败计数，给予重试机会")
+    
+    def _get_failure_stats(self) -> Dict[str, Any]:
+        """获取失败统计信息"""
+        stats = {}
+        for provider in self.analyzers.keys():
+            stats[provider.value] = self.failure_tracker.get_failure_info(provider)
+        return stats
     
     def get_analyzer_status(self) -> Dict[str, Any]:
         """获取分析器状态"""
         status = {
-            'strategy': self.strategy.value,
+            'strategy': 'fallback',  # 简化：只使用fallback策略
             'fallback_order': [p.value for p in self.fallback_order],
-            'analyzers': {}
+            'analyzers': {},
+            'failure_stats': self._get_failure_stats()
         }
         
         for provider, analyzer in self.analyzers.items():
             info = analyzer.get_provider_info()
             info['available'] = analyzer.is_available()
+            info['disabled'] = self.failure_tracker.is_disabled(provider)
+            info['failure_info'] = self.failure_tracker.get_failure_info(provider)
             status['analyzers'][provider.value] = info
         
         return status 

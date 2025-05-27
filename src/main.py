@@ -11,7 +11,7 @@ from pathlib import Path
 # 添加当前目录到Python路径
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ai.analyzers.legacy import AnalyzerFactory
+# 已使用新的多AI系统，无需导入legacy模块
 from data.arxiv_client import ArxivClient
 from config import Config
 from output.email_sender import EmailSender

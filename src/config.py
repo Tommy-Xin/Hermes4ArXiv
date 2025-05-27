@@ -41,13 +41,16 @@ class Config:
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
         self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro-preview-05-06")
         
-        # AI分析策略配置
-        self.ANALYSIS_STRATEGY = os.getenv("ANALYSIS_STRATEGY", "fallback")
+        # AI分析配置（使用智能降级策略）
         self.AI_FALLBACK_ORDER = os.getenv("AI_FALLBACK_ORDER", "deepseek,openai,claude,gemini")
         self.ANALYSIS_TYPE = os.getenv("ANALYSIS_TYPE", "comprehensive")
         
         # 🎯 用户指定使用的AI模型 (优先级最高)
         self.PREFERRED_AI_MODEL = os.getenv("PREFERRED_AI_MODEL", "").lower().strip()  # deepseek, openai, claude, gemini
+        
+        # 失败检测和处理配置
+        self.MAX_CONSECUTIVE_FAILURES = int(os.getenv("MAX_CONSECUTIVE_FAILURES", "3"))  # 最大连续失败次数
+        self.FAILURE_RESET_TIME = int(os.getenv("FAILURE_RESET_TIME", "300"))  # 失败计数重置时间（秒）
 
         # 邮件配置
         self.SMTP_SERVER = os.getenv("SMTP_SERVER")

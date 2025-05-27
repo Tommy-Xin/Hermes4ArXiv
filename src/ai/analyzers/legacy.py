@@ -21,8 +21,7 @@ import openai
 
 from utils.logger import logger
 
-# 发出弃用警告
-logger.warning("⚠️ ai_analyzer.py 已弃用，建议使用新的多AI系统")
+# Legacy模块 - 仅用于向后兼容，实际使用新的多AI系统
 
 
 class AIAnalyzer(ABC):
