@@ -102,6 +102,9 @@ validate-env: ## 验证环境变量配置
 validate-env-local: ## 🏠 本地环境验证（跳过SMTP测试）
 	uv run scripts/validate_env_local.py
 
+fix-env-encoding: ## 🔧 修复.env文件中的编码问题（如Gmail密码中的特殊字符）
+	uv run scripts/fix_env_encoding.py
+
 test-workflows: ## 🔍 分析和测试工作流配置
 	uv run scripts/test_workflows.py
 

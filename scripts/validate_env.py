@@ -15,6 +15,13 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 
+def clean_string(value):
+    """清理字符串中的特殊字符"""
+    if not value:
+        return value
+    # 移除不间断空格和其他不可见字符
+    return value.replace('\xa0', ' ').strip()
+
 # 尝试加载 .env 文件
 try:
     from dotenv import load_dotenv
@@ -59,8 +66,8 @@ def test_smtp_connection():
         smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
         smtp_port_str = os.getenv('SMTP_PORT', '587').strip()
         smtp_port = int(smtp_port_str) if smtp_port_str else 587
-        username = os.getenv('SMTP_USERNAME')
-        password = os.getenv('SMTP_PASSWORD')
+        username = clean_string(os.getenv('SMTP_USERNAME'))
+        password = clean_string(os.getenv('SMTP_PASSWORD'))
         
         print(f"🔍 测试 SMTP 连接: {smtp_server}:{smtp_port}")
         
@@ -95,8 +102,8 @@ def send_test_email():
         smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
         smtp_port_str = os.getenv('SMTP_PORT', '587').strip()
         smtp_port = int(smtp_port_str) if smtp_port_str else 587
-        username = os.getenv('SMTP_USERNAME')
-        password = os.getenv('SMTP_PASSWORD')
+        username = clean_string(os.getenv('SMTP_USERNAME'))
+        password = clean_string(os.getenv('SMTP_PASSWORD'))
         email_from = os.getenv('EMAIL_FROM')
         email_to = os.getenv('EMAIL_TO')
         

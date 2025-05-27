@@ -17,6 +17,13 @@ load_dotenv()
 class Config:
     """配置类，管理所有配置项"""
 
+    def _clean_string(self, value: str) -> str:
+        """清理字符串中的特殊字符"""
+        if not value:
+            return value
+        # 移除不间断空格和其他不可见字符
+        return value.replace('\xa0', ' ').strip()
+
     def __init__(self):
         """初始化配置，从环境变量读取"""
         # API配置
@@ -27,8 +34,8 @@ class Config:
         self.SMTP_SERVER = os.getenv("SMTP_SERVER")
         smtp_port = os.getenv("SMTP_PORT", "587").strip()
         self.SMTP_PORT = int(smtp_port) if smtp_port else 587
-        self.SMTP_USERNAME = os.getenv("SMTP_USERNAME")
-        self.SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+        self.SMTP_USERNAME = self._clean_string(os.getenv("SMTP_USERNAME"))
+        self.SMTP_PASSWORD = self._clean_string(os.getenv("SMTP_PASSWORD"))
         self.EMAIL_FROM = os.getenv("EMAIL_FROM")
         self.EMAIL_TO = [
             email.strip() for email in os.getenv("EMAIL_TO", "").split(",") if email.strip()
