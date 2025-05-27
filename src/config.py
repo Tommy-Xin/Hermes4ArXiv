@@ -48,9 +48,10 @@ class Config:
         self.TEMPLATES_DIR = self.BASE_DIR / "templates"
 
         # ArXiv搜索配置
-        self.CATEGORIES = ["cs.AI", "cs.LG", "cs.CL"]  # 默认类别
-        self.MAX_PAPERS = 50  # 最大论文数量
-        self.SEARCH_DAYS = 2  # 搜索最近几天的论文
+        categories_str = os.getenv("CATEGORIES", "cs.AI,cs.LG,cs.CL")
+        self.CATEGORIES = [cat.strip() for cat in categories_str.split(",") if cat.strip()]
+        self.MAX_PAPERS = int(os.getenv("MAX_PAPERS", "50"))
+        self.SEARCH_DAYS = int(os.getenv("SEARCH_DAYS", "2"))
 
         # AI分析配置
         self.AI_MODEL = "deepseek-chat"
