@@ -121,6 +121,11 @@ class AIAnalyzerAdapter:
                     self.multi_analyzer.analyze_paper(paper, self.analysis_type)
                 )
                 
+                # 检查结果是否为None
+                if result is None:
+                    logger.error("❌ 多AI分析返回None结果")
+                    return PromptManager.get_error_analysis("AI分析返回空结果")
+                
                 # 提取分析文本
                 analysis_text = result.get('analysis', '')
                 provider = result.get('provider', 'unknown')
@@ -132,7 +137,7 @@ class AIAnalyzerAdapter:
                 if 'error' in result:
                     logger.warning(f"⚠️ 分析过程中有错误: {result['error']}")
                 
-                return analysis_text
+                return analysis_text or PromptManager.get_error_analysis("AI分析结果为空")
                 
             finally:
                 loop.close()
@@ -146,9 +151,14 @@ class AIAnalyzerAdapter:
     def _analyze_with_legacy_ai(self, paper: arxiv.Result) -> str:
         """使用传统AI分析器分析论文"""
         try:
+            # 检查传统分析器是否已初始化
+            if not hasattr(self, 'legacy_analyzer') or self.legacy_analyzer is None:
+                logger.error("❌ 传统AI分析器未初始化")
+                return PromptManager.get_error_analysis("传统AI分析器未初始化")
+            
             analysis = self.legacy_analyzer.analyze_paper(paper)
             logger.info("✅ 传统AI分析完成")
-            return analysis
+            return analysis or PromptManager.get_error_analysis("传统AI分析结果为空")
         except Exception as e:
             logger.error(f"❌ 传统AI分析失败: {e}")
             # 返回错误分析
