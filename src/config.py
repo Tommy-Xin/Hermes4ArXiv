@@ -29,17 +29,17 @@ class Config:
         # AI API配置
         self.DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
         self.DEEPSEEK_API_BASE = "https://api.deepseek.com/v1"
-        self.DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        self.DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-r1")
         
         # 多AI支持
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-        self.OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+        self.OPENAI_MODEL = os.getenv("OPENAI_MODEL", "o3-2025-04-16")
         
         self.CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
-        self.CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-haiku-20240307")
+        self.CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-opus-4-20250514")
         
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-        self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-pro")
+        self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro-preview-05-06")
         
         # AI分析策略配置
         self.ANALYSIS_STRATEGY = os.getenv("ANALYSIS_STRATEGY", "fallback")
@@ -59,9 +59,9 @@ class Config:
 
         # 文件路径配置
         self.BASE_DIR = Path(__file__).parent
-        self.PAPERS_DIR = self.BASE_DIR / "papers"
-        self.CONCLUSION_FILE = self.BASE_DIR / "conclusion.md"
-        self.TEMPLATES_DIR = self.BASE_DIR / "templates"
+        self.PAPERS_DIR = self.BASE_DIR / "storage" / "papers"
+        self.CONCLUSION_FILE = self.BASE_DIR / "storage" / "conclusion.md"
+        self.TEMPLATES_DIR = self.BASE_DIR / "output" / "templates"
 
         # ArXiv搜索配置
         categories_str = os.getenv("CATEGORIES", "cs.AI,cs.LG,cs.CL")
@@ -115,5 +115,7 @@ class Config:
 
     def create_directories(self):
         """创建必要的目录"""
-        self.PAPERS_DIR.mkdir(exist_ok=True)
-        self.TEMPLATES_DIR.mkdir(exist_ok=True)
+        self.PAPERS_DIR.mkdir(parents=True, exist_ok=True)
+        self.TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
+        # 创建日志目录
+        (self.BASE_DIR / "storage" / "logs").mkdir(parents=True, exist_ok=True)

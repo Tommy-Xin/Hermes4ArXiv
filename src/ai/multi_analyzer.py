@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Dict, List, Optional, Tuple, Any
 import arxiv
 
-from ai_prompts import PromptManager
+from ai.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class BaseAIAnalyzer(ABC):
 class DeepSeekAnalyzer(BaseAIAnalyzer):
     """DeepSeek分析器"""
     
-    def __init__(self, api_key: str, model: str = "deepseek-chat", **kwargs):
+    def __init__(self, api_key: str, model: str = "deepseek-r1", **kwargs):
         super().__init__(api_key, model, **kwargs)
         self.base_url = "https://api.deepseek.com/v1"
     
@@ -315,19 +315,37 @@ class MultiAIAnalyzer:
             return AnalysisStrategy.FALLBACK
     
     def _parse_fallback_order(self) -> List[AIProvider]:
-        """解析降级顺序"""
-        order_str = self.config.get('AI_FALLBACK_ORDER', 'deepseek,openai,claude,gemini')
-        order = []
+        """解析使用顺序 - 自动选择配置的模型"""
+        # SOTA模型优先级顺序（2025年5月最新）
+        sota_priority = ['claude', 'gemini', 'openai', 'deepseek']
         
-        for provider_name in order_str.split(','):
-            provider_name = provider_name.strip().lower()
-            try:
-                provider = AIProvider(provider_name)
-                order.append(provider)
-            except ValueError:
-                logger.warning(f"未知的AI提供商: {provider_name}")
+        # 检查用户配置的API密钥，按SOTA优先级排序
+        available_providers = []
+        for provider_name in sota_priority:
+            if self.config.get(f'{provider_name.upper()}_API_KEY'):
+                try:
+                    provider = AIProvider(provider_name)
+                    available_providers.append(provider)
+                except ValueError:
+                    logger.warning(f"未知的AI提供商: {provider_name}")
         
-        return order if order else [AIProvider.DEEPSEEK]
+        # 如果用户明确设置了降级顺序，尊重用户设置
+        if self.config.get('AI_FALLBACK_ORDER'):
+            order_str = self.config.get('AI_FALLBACK_ORDER')
+            user_order = []
+            for provider_name in order_str.split(','):
+                provider_name = provider_name.strip().lower()
+                try:
+                    provider = AIProvider(provider_name)
+                    if provider in available_providers:
+                        user_order.append(provider)
+                except ValueError:
+                    logger.warning(f"未知的AI提供商: {provider_name}")
+            if user_order:
+                return user_order
+        
+        # 返回可用的提供商（按SOTA优先级）
+        return available_providers if available_providers else [AIProvider.DEEPSEEK]
     
     def _initialize_analyzers(self):
         """初始化分析器"""
@@ -340,29 +358,29 @@ class MultiAIAnalyzer:
                 delay=self.config.get('API_DELAY', 2)
             )
         
-        # OpenAI
+        # OpenAI - 默认使用o3（2025年SOTA推理模型）
         if self.config.get('OPENAI_API_KEY'):
             self.analyzers[AIProvider.OPENAI] = OpenAIAnalyzer(
                 api_key=self.config['OPENAI_API_KEY'],
-                model=self.config.get('OPENAI_MODEL', 'gpt-3.5-turbo'),
+                model=self.config.get('OPENAI_MODEL', 'o3-2025-04-16'),  # 使用最新的o3推理模型
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
                 delay=self.config.get('API_DELAY', 2)
             )
         
-        # Claude
+        # Claude - 默认使用Claude Opus 4（2025年最强模型）
         if self.config.get('CLAUDE_API_KEY'):
             self.analyzers[AIProvider.CLAUDE] = ClaudeAnalyzer(
                 api_key=self.config['CLAUDE_API_KEY'],
-                model=self.config.get('CLAUDE_MODEL', 'claude-3-haiku-20240307'),
+                model=self.config.get('CLAUDE_MODEL', 'claude-opus-4-20250514'),  # 最新的Claude Opus 4模型
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
                 delay=self.config.get('API_DELAY', 2)
             )
         
-        # Gemini
+        # Gemini - 默认使用Gemini 2.5 Pro Preview（2025年最新SOTA）
         if self.config.get('GEMINI_API_KEY'):
             self.analyzers[AIProvider.GEMINI] = GeminiAnalyzer(
                 api_key=self.config['GEMINI_API_KEY'],
-                model=self.config.get('GEMINI_MODEL', 'gemini-pro'),
+                model=self.config.get('GEMINI_MODEL', 'gemini-2.5-pro-preview-05-06'),  # 最新的Gemini 2.5 Pro Preview
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
                 delay=self.config.get('API_DELAY', 2)
             )

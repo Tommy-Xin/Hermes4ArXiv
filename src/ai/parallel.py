@@ -11,7 +11,7 @@ from typing import List, Tuple, Optional
 
 import arxiv
 
-from ai_analyzer import AIAnalyzer
+from ai.analyzers.legacy import AIAnalyzer
 from utils.logger import logger
 
 

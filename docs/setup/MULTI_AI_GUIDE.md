@@ -29,20 +29,24 @@ Hermes4ArXiv现在支持多个AI提供商，提供更强大的分析能力和更
 DEEPSEEK_API_KEY=sk-your-deepseek-api-key
 ```
 
-### 多AI配置
+### 多AI配置（SOTA模型优先）
 ```bash
-# 主要AI（必需）
-DEEPSEEK_API_KEY=sk-your-deepseek-api-key
-
-# 备用AI（可选，提供降级能力）
-OPENAI_API_KEY=sk-your-openai-api-key
+# 主要AI（推荐使用SOTA模型）
 CLAUDE_API_KEY=sk-ant-your-claude-api-key
+OPENAI_API_KEY=sk-your-openai-api-key
+
+# 备用AI（高性价比选择）
+DEEPSEEK_API_KEY=sk-your-deepseek-api-key
 GEMINI_API_KEY=your-gemini-api-key
 
-# 分析策略配置
+# 分析策略配置（SOTA模型优先）
 ANALYSIS_STRATEGY=fallback
-AI_FALLBACK_ORDER=deepseek,openai,claude,gemini
+AI_FALLBACK_ORDER=claude,openai,gemini,deepseek
 ANALYSIS_TYPE=comprehensive
+
+# 使用最新SOTA模型
+CLAUDE_MODEL=claude-3-5-sonnet-20241022
+OPENAI_MODEL=gpt-4-turbo-preview
 ```
 
 ## 📋 配置详解
@@ -179,22 +183,26 @@ ANALYSIS_TYPE=quick
 
 ### 平衡型配置（推荐）
 ```bash
-# DeepSeek + OpenAI降级
+# SOTA模型 + 高性价比降级
+CLAUDE_API_KEY=sk-your-claude-key
 DEEPSEEK_API_KEY=sk-your-deepseek-key
-OPENAI_API_KEY=sk-your-openai-key
 ANALYSIS_STRATEGY=fallback
-AI_FALLBACK_ORDER=deepseek,openai
+AI_FALLBACK_ORDER=claude,deepseek
 ANALYSIS_TYPE=comprehensive
+CLAUDE_MODEL=claude-3-5-sonnet-20241022
 ```
 
-### 高质量配置
+### 高质量配置（SOTA模型优先）
 ```bash
-# 多AI共识分析
-DEEPSEEK_API_KEY=sk-your-deepseek-key
-OPENAI_API_KEY=sk-your-openai-key
+# 多个SOTA模型共识分析
 CLAUDE_API_KEY=sk-your-claude-key
+OPENAI_API_KEY=sk-your-openai-key
+DEEPSEEK_API_KEY=sk-your-deepseek-key
 ANALYSIS_STRATEGY=consensus
+AI_FALLBACK_ORDER=claude,openai,deepseek
 ANALYSIS_TYPE=detailed
+CLAUDE_MODEL=claude-3-5-sonnet-20241022
+OPENAI_MODEL=gpt-4-turbo-preview
 ```
 
 ## 🔍 故障排除

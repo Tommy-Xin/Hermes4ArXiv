@@ -9,8 +9,8 @@ import logging
 from typing import Dict, Any
 import arxiv
 
-from multi_ai_analyzer import MultiAIAnalyzer
-from ai_prompts import PromptManager
+from ai.multi_analyzer import MultiAIAnalyzer
+from ai.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class AIAnalyzerAdapter:
     
     def _should_enable_multi_ai(self) -> bool:
         """判断是否应该启用多AI功能"""
-        # 如果配置了多个AI API密钥，或者明确设置了分析策略，则启用多AI
+        # 检查是否有任何AI API密钥配置
         ai_keys = [
             getattr(self.config, 'DEEPSEEK_API_KEY', None),
             getattr(self.config, 'OPENAI_API_KEY', None),
@@ -50,10 +50,8 @@ class AIAnalyzerAdapter:
         # 统计有效的API密钥数量
         valid_keys = sum(1 for key in ai_keys if key and len(key) > 10)
         
-        # 如果有多个API密钥，或者明确设置了分析策略，启用多AI
-        strategy = getattr(self.config, 'ANALYSIS_STRATEGY', 'fallback')
-        
-        return valid_keys > 1 or strategy != 'fallback'
+        # 如果有任何一个API密钥，启用多AI（单模型策略）
+        return valid_keys > 0
     
     def _initialize_multi_ai(self):
         """初始化多AI分析器"""
@@ -81,7 +79,7 @@ class AIAnalyzerAdapter:
     
     def _initialize_legacy_ai(self):
         """初始化传统单AI分析器"""
-        from ai_analyzer import AnalyzerFactory
+        from ai.analyzers.legacy import AnalyzerFactory
         
         try:
             self.legacy_analyzer = AnalyzerFactory.create_analyzer(

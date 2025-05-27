@@ -59,6 +59,8 @@ Thumbs.db
 # Project specific
 src/papers/*.pdf
 src/papers/
+src/storage/papers/*.pdf
+src/storage/papers/
 src/logs/*.log
 src/logs/
 logs/

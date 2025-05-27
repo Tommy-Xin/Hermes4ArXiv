@@ -11,12 +11,12 @@ from pathlib import Path
 # 添加当前目录到Python路径
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ai_analyzer import AnalyzerFactory
-from arxiv_client import ArxivClient
+from ai.analyzers.legacy import AnalyzerFactory
+from data.arxiv_client import ArxivClient
 from config import Config
-from email_sender import EmailSender
-from output_formatter import OutputFormatter
-from parallel_analyzer import ParallelPaperAnalyzer
+from output.email_sender import EmailSender
+from output.formatter import OutputFormatter
+from ai.parallel import ParallelPaperAnalyzer
 from utils.logger import logger
 
 
@@ -52,7 +52,7 @@ class ArxivPaperTracker:
             )
 
             # 初始化AI分析器（支持多AI）
-            from ai_analyzer_adapter import create_ai_analyzer
+            from ai.adapter import create_ai_analyzer
             self.ai_analyzer = create_ai_analyzer(self.config)
 
             # 初始化输出格式化器

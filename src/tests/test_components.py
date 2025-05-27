@@ -7,14 +7,14 @@
 import sys
 from pathlib import Path
 
-# 添加当前目录到Python路径
-sys.path.insert(0, str(Path(__file__).parent))
+# 添加src目录到Python路径
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from ai_analyzer import AnalyzerFactory
-from arxiv_client import ArxivClient
+from ai.analyzers.legacy import AnalyzerFactory
+from data.arxiv_client import ArxivClient
 from config import Config
-from email_sender import EmailSender
-from output_formatter import OutputFormatter
+from output.email_sender import EmailSender
+from output.formatter import OutputFormatter
 from utils.logger import logger
 
 

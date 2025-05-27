@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """
-AI分析模块
+⚠️ 已弃用 - AI分析模块
+该模块已被新的多AI系统取代，仅保留用于向后兼容。
+
+新的多AI系统位于：
+- multi_ai_analyzer.py: 多AI分析器核心
+- ai_analyzer_adapter.py: 兼容性适配器
+
+建议使用新的多AI系统获得更好的性能和可靠性。
+
 支持多种AI API和论文分析功能
 """
 
@@ -12,6 +20,9 @@ import arxiv
 import openai
 
 from utils.logger import logger
+
+# 发出弃用警告
+logger.warning("⚠️ ai_analyzer.py 已弃用，建议使用新的多AI系统")
 
 
 class AIAnalyzer(ABC):

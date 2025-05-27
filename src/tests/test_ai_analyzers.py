@@ -10,11 +10,11 @@ import sys
 from pathlib import Path
 
 # 添加src目录到路径
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import Config
-from ai_analyzer_adapter import create_ai_analyzer
-from arxiv_client import ArxivClient
+from ai.adapter import create_ai_analyzer
+from data.arxiv_client import ArxivClient
 
 # 配置日志
 logging.basicConfig(
@@ -139,7 +139,7 @@ def test_prompt_manager():
     print("\n🎯 测试提示词管理器")
     print("-" * 30)
     
-    from ai_prompts import PromptManager
+    from ai.prompts import PromptManager
     
     # 测试不同类型的系统提示词
     for analysis_type in ['comprehensive', 'quick', 'detailed']:
