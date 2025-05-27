@@ -47,7 +47,8 @@ def check_required_env_vars():
     
     configured_apis = []
     for api in ai_apis:
-        if os.getenv(api):
+        value = os.getenv(api)
+        if value and value.strip():  # 检查非空且非空字符串
             configured_apis.append(api)
     
     if not configured_apis:
@@ -72,7 +73,8 @@ def check_required_env_vars():
     
     missing_email_vars = []
     for var in email_vars:
-        if not os.getenv(var):
+        value = os.getenv(var)
+        if not value or not value.strip():  # 检查空值和空字符串
             missing_email_vars.append(var)
     
     if missing_email_vars:
@@ -87,8 +89,9 @@ def check_required_env_vars():
 def test_smtp_connection():
     """测试 SMTP 连接"""
     try:
-        smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-        smtp_port_str = os.getenv('SMTP_PORT', '587').strip()
+        # 处理空字符串的情况
+        smtp_server = os.getenv('SMTP_SERVER') or 'smtp.gmail.com'
+        smtp_port_str = (os.getenv('SMTP_PORT') or '587').strip()
         smtp_port = int(smtp_port_str) if smtp_port_str else 587
         username = clean_string(os.getenv('SMTP_USERNAME'))
         password = clean_string(os.getenv('SMTP_PASSWORD'))
@@ -123,8 +126,9 @@ def test_smtp_connection():
 def send_test_email():
     """发送测试邮件"""
     try:
-        smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-        smtp_port_str = os.getenv('SMTP_PORT', '587').strip()
+        # 处理空字符串的情况
+        smtp_server = os.getenv('SMTP_SERVER') or 'smtp.gmail.com'
+        smtp_port_str = (os.getenv('SMTP_PORT') or '587').strip()
         smtp_port = int(smtp_port_str) if smtp_port_str else 587
         username = clean_string(os.getenv('SMTP_USERNAME'))
         password = clean_string(os.getenv('SMTP_PASSWORD'))
