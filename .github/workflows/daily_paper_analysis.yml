@@ -1,4 +1,4 @@
-name: Daily Paper Analysis
+name: 📰 Daily Paper Analysis
 
 on:
   schedule:

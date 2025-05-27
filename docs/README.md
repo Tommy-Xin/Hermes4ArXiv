@@ -15,6 +15,7 @@
 - `PARALLEL_OPTIMIZATION_GUIDE.md` - 并行优化指南
 - `PARALLEL_OPTIMIZATION_SUMMARY.md` - 并行优化总结
 - `CACHE_ISSUES_GUIDE.md` - GitHub Actions缓存问题解决指南
+- `CACHE_ISSUE_SOLUTION_SUMMARY.md` - 缓存问题快速解决方案
 
 ### 🚀 extensions/ - 扩展功能
 - `EXTENSIONS_SUMMARY.md` - 扩展功能总结

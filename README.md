@@ -1,6 +1,8 @@
-# ArXiv论文追踪与分析器
+# Hermes4ArXiv - 智慧学术信使
 
-一个基于 GitHub Actions 的自动化工具，每天自动追踪和分析 arXiv 最新论文，并通过邮件发送美化的分析报告。该工具采用模块化架构，支持多种AI API和美化的输出格式。
+🏛️ **Hermes4ArXiv** - 如同希腊神话中的智慧信使，为您传递学术前沿的珍贵知识。
+
+基于 GitHub Actions 的智能学术追踪工具，每天自动监控 arXiv 最新论文，运用 AI 深度分析，并通过精美邮件报告为您呈现学术世界的最新动态。
 
 > 🚀 **新用户？** 查看 [快速开始总结](docs/setup/QUICK_START_SUMMARY.md) 了解 5 分钟配置流程！
 
