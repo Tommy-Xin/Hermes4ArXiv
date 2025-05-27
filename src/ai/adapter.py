@@ -6,6 +6,7 @@ AI分析器适配器
 
 import asyncio
 import logging
+import time
 from typing import Dict, Any
 import arxiv
 
@@ -79,20 +80,26 @@ class AIAnalyzerAdapter:
     
     def _initialize_legacy_ai(self):
         """初始化传统单AI分析器"""
-        from ai.analyzers.legacy import AnalyzerFactory
-        
         try:
+            from ai.analyzers.legacy import AnalyzerFactory
+            
+            # 检查是否有DeepSeek API密钥
+            if not hasattr(self.config, 'DEEPSEEK_API_KEY') or not self.config.DEEPSEEK_API_KEY:
+                logger.error("❌ 未配置DEEPSEEK_API_KEY，无法初始化传统AI分析器")
+                self.legacy_analyzer = None
+                return
+                
             self.legacy_analyzer = AnalyzerFactory.create_analyzer(
                 "deepseek",
                 api_key=self.config.DEEPSEEK_API_KEY,
                 model=getattr(self.config, 'AI_MODEL', 'deepseek-chat'),
-                retry_times=self.config.API_RETRY_TIMES,
-                delay=self.config.API_DELAY,
+                retry_times=getattr(self.config, 'API_RETRY_TIMES', 3),
+                delay=getattr(self.config, 'API_DELAY', 2),
             )
             logger.info("✅ 传统AI分析器初始化成功")
         except Exception as e:
             logger.error(f"❌ 传统AI分析器初始化失败: {e}")
-            raise
+            self.legacy_analyzer = None
     
     def analyze_paper(self, paper: arxiv.Result) -> str:
         """
@@ -179,13 +186,25 @@ class AIAnalyzerAdapter:
         else:
             # 将传统分析器的结果包装成新格式
             try:
+                # 检查传统分析器是否已初始化
+                if not hasattr(self, 'legacy_analyzer') or self.legacy_analyzer is None:
+                    error_analysis = PromptManager.get_error_analysis("传统AI分析器未初始化")
+                    return {
+                        'analysis': error_analysis,
+                        'provider': 'error',
+                        'model': 'none',
+                        'timestamp': time.time(),
+                        'html_analysis': PromptManager.format_analysis_for_html(error_analysis),
+                        'error': '传统AI分析器未初始化'
+                    }
+                    
                 analysis = self.legacy_analyzer.analyze_paper(paper)
                 return {
-                    'analysis': analysis,
+                    'analysis': analysis or PromptManager.get_error_analysis("传统AI分析结果为空"),
                     'provider': 'deepseek',
                     'model': getattr(self.config, 'AI_MODEL', 'deepseek-chat'),
-                    'timestamp': asyncio.get_event_loop().time(),
-                    'html_analysis': PromptManager.format_analysis_for_html(analysis)
+                    'timestamp': time.time(),
+                    'html_analysis': PromptManager.format_analysis_for_html(analysis or "分析失败")
                 }
             except Exception as e:
                 error_analysis = PromptManager.get_error_analysis(str(e))
@@ -193,7 +212,7 @@ class AIAnalyzerAdapter:
                     'analysis': error_analysis,
                     'provider': 'error',
                     'model': 'none',
-                    'timestamp': asyncio.get_event_loop().time(),
+                    'timestamp': time.time(),
                     'html_analysis': PromptManager.format_analysis_for_html(error_analysis),
                     'error': str(e)
                 }
