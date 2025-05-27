@@ -35,7 +35,7 @@ class Config:
         # AI API配置
         self.DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
         self.DEEPSEEK_API_BASE = "https://api.deepseek.com/v1"
-        self.DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-r1")
+        self.DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
         
         # 多AI支持
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

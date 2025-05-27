@@ -131,7 +131,7 @@ class BaseAIAnalyzer(ABC):
 class DeepSeekAnalyzer(BaseAIAnalyzer):
     """DeepSeek分析器"""
     
-    def __init__(self, api_key: str, model: str = "deepseek-r1", **kwargs):
+    def __init__(self, api_key: str, model: str = "deepseek-chat", **kwargs):
         super().__init__(api_key, model, **kwargs)
         self.base_url = "https://api.deepseek.com/v1"
     
@@ -355,7 +355,7 @@ class GeminiAnalyzer(BaseAIAnalyzer):
         super().__init__(api_key, model, **kwargs)
         # 针对安全过滤器的特殊处理
         self.safety_failure_count = 0
-        self.max_safety_failures = 2  # 连续2次安全过滤失败就跳过
+        self.max_safety_failures = 1  # 连续1次安全过滤失败就跳过，避免浪费时间
     
     async def analyze_paper(self, paper: arxiv.Result, analysis_type: str = "comprehensive") -> Dict[str, Any]:
         """分析论文"""
@@ -370,14 +370,17 @@ class GeminiAnalyzer(BaseAIAnalyzer):
         system_prompt = PromptManager.get_system_prompt(analysis_type)
         user_prompt = PromptManager.get_user_prompt(paper, analysis_type)
         
-        # 合并系统提示和用户提示
-        full_prompt = f"{system_prompt}\n\n{user_prompt}"
+        # 为Gemini优化提示，使用更学术化的语言
+        academic_system_prompt = """You are an academic research assistant specializing in analyzing scientific papers. Please provide a comprehensive analysis of the given research paper, focusing on its technical contributions and academic significance."""
+        
+        # 合并系统提示和用户提示，使用学术化的语言
+        full_prompt = f"{academic_system_prompt}\n\nPlease analyze this research paper:\n\nTitle: {paper.title}\n\nSummary: {paper.summary}\n\nProvide a detailed academic analysis."""
         
         for attempt in range(self.retry_times):
             try:
                 logger.info(f"Gemini分析论文: {paper.title[:50]}... (尝试 {attempt + 1}/{self.retry_times})")
                 
-                # 配置安全设置 - 降低过滤严格程度
+                # 配置安全设置 - 最宽松设置
                 safety_settings = [
                     {
                         "category": "HARM_CATEGORY_HARASSMENT",
