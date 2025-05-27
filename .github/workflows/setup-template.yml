@@ -46,14 +46,14 @@ jobs:
         fi
         
         if [ "$ai_configured" = false ]; then
-          echo "❌ 未配置任何AI API密钥"
+          echo "❌ 未配置任何AI API密钥，请至少配置一个AI模型"
           secrets_status="missing"
         else
           echo "🎯 AI模型配置完成，系统将自动选择最佳可用模型"
         fi
         
         # 检查必需的邮件配置
-        secrets_status=""
+        # 保持 secrets_status 的值，不重置
         
         if [ -z "${{ secrets.SMTP_SERVER }}" ]; then
           echo "❌ SMTP_SERVER: 未配置"
@@ -97,22 +97,24 @@ jobs:
           echo "📝 配置步骤："
           echo "1. 进入仓库 Settings → Secrets and variables → Actions"
           echo "2. 点击 'New repository secret'"
-          echo "3. 添加 SOTA AI模型 API (只需配置一个)："
-          echo "   🏆 CLAUDE_API_KEY: Claude Opus 4 API密钥 (推荐)"
-          echo "   🔬 GEMINI_API_KEY: Gemini 2.5 Pro Preview API密钥"
+          echo "3. 🤖 添加AI模型API (四选一即可，无需全部配置)："
+          echo "   🏆 CLAUDE_API_KEY: Claude Opus 4 API密钥"
+          echo "   🔬 GEMINI_API_KEY: Gemini 2.5 Pro Preview API密钥"  
           echo "   🧠 OPENAI_API_KEY: OpenAI o3 API密钥"
-          echo "   💰 DEEPSEEK_API_KEY: DeepSeek R1 API密钥 (经济型)"
-          echo "4. 添加邮件配置："
+          echo "   💰 DEEPSEEK_API_KEY: DeepSeek R1 API密钥"
+          echo "   ❗ 提示: 选择任意一个配置即可，系统会自动使用可用的API"
+          echo "4. 📧 添加邮件配置 (必需)："
           echo "   - SMTP_SERVER: 邮件服务器 (如: smtp.gmail.com)"
           echo "   - SMTP_USERNAME: 邮箱账号"
           echo "   - SMTP_PASSWORD: 邮箱授权码"
           echo "   - EMAIL_FROM: 发件人邮箱"
           echo "   - EMAIL_TO: 收件人邮箱"
           echo ""
-          echo "📖 详细配置指南: https://github.com/${{ github.repository }}/blob/main/SECRETS_SETUP_GUIDE.md"
+          echo "📖 详细配置指南: https://github.com/${{ github.repository }}/blob/main/docs/README.md"
           exit 1
         else
-          echo "🎉 所有必需的 Secrets 都已配置完成！"
+          echo "🎉 配置验证成功！AI模型和邮件配置均已就绪"
+          echo "💡 提示: 系统已自动选择最佳可用的AI模型进行分析"
         fi
 
   test-configuration:
