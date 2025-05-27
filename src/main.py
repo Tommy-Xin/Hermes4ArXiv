@@ -61,7 +61,7 @@ class ArxivPaperTracker:
             )
 
             # 初始化输出格式化器
-            self.output_formatter = OutputFormatter(self.config.TEMPLATES_DIR)
+            self.output_formatter = OutputFormatter(self.config.TEMPLATES_DIR, self.config.GITHUB_REPO_URL)
 
             # 初始化邮件发送器
             self.email_sender = EmailSender.create_from_config(self.config)

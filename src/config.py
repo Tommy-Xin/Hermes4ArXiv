@@ -71,6 +71,9 @@ class Config:
         # 输出配置
         self.OUTPUT_FORMAT = "markdown"  # 输出格式：markdown, html
         self.EMAIL_FORMAT = "html"  # 邮件格式：html, text
+        
+        # GitHub仓库配置
+        self.GITHUB_REPO_URL = os.getenv("GITHUB_REPO_URL", "https://github.com/your-username/hermes4arxiv")
 
     def validate(self) -> bool:
         """验证配置是否完整"""

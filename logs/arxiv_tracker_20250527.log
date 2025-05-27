@@ -1,0 +1,4 @@
+2025-05-27 15:17:22 - arxiv_tracker - INFO - 正在搜索论文，查询条件: (cat:cs.AI) AND submittedDate:[20250520000000 TO 20250527235959]
+2025-05-27 15:17:24 - arxiv_tracker - INFO - 找到3篇符合条件的论文
+2025-05-27 15:17:24 - arxiv_tracker - INFO - 正在分析论文: KnowTrace: Bootstrapping Iterative Retrieval-Augmented Generation with Structured Knowledge Tracing (尝试 1/1)
+2025-05-27 15:17:54 - arxiv_tracker - INFO - 论文分析完成: KnowTrace: Bootstrapping Iterative Retrieval-Augmented Generation with Structured Knowledge Tracing

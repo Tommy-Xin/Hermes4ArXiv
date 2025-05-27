@@ -133,8 +133,7 @@ def get_code_quality():
     config_files = [
         ".pre-commit-config.yaml",
         "Makefile",
-        "Dockerfile",
-        "docker-compose.yml"
+
     ]
     
     existing_configs = [f for f in config_files if (project_root / f).exists()]

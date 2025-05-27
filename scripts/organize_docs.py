@@ -50,8 +50,7 @@ class DocumentOrganizer:
             "env.example",
             "Makefile",
             "pyproject.toml",
-            "docker-compose.yml",
-            "Dockerfile",
+            
             ".pre-commit-config.yaml",
             ".gitignore"
         }

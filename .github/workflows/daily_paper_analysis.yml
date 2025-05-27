@@ -69,6 +69,13 @@ jobs:
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        # 可选配置，用户可以在Secrets中覆盖
+        CATEGORIES: ${{ secrets.CATEGORIES || 'cs.AI,cs.LG,cs.CL' }}
+        MAX_PAPERS: ${{ secrets.MAX_PAPERS || '50' }}
+        SEARCH_DAYS: ${{ secrets.SEARCH_DAYS || '2' }}
+        ENABLE_PARALLEL: ${{ secrets.ENABLE_PARALLEL || 'true' }}
+        MAX_WORKERS: ${{ secrets.MAX_WORKERS || '0' }}
       run: |
         cd src
         uv run python main.py

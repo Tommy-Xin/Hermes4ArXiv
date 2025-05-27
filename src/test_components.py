@@ -99,7 +99,7 @@ def test_output_formatter(config, papers_analyses):
     """测试输出格式化器"""
     print("\n📄 测试输出格式化器...")
     try:
-        formatter = OutputFormatter(config.TEMPLATES_DIR)
+        formatter = OutputFormatter(config.TEMPLATES_DIR, config.GITHUB_REPO_URL)
 
         if papers_analyses:
             # 测试Markdown格式

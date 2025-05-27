@@ -64,6 +64,9 @@ run: ## 运行主程序
 test-components: ## 运行组件测试
 	cd src && uv run python test_components.py
 
+preview-template: ## 生成HTML邮件模板预览
+	uv run python src/preview_template.py
+
 pre-commit-install: ## 安装 pre-commit hooks
 	uv run pre-commit install
 
@@ -215,10 +218,9 @@ deploy-web: ## 部署 Web 界面
 	cd web && npm run build
 	@echo "部署到 GitHub Pages..."
 
-deploy-api: ## 部署 API 服务
-	@echo "构建 API 容器..."
-	docker build -t arxiv-tracker-api .
-	@echo "部署 API 服务..."
+deploy-api: ## 部署 API 服务 (GitHub Actions)
+	@echo "API 服务通过 GitHub Actions 自动部署"
+	@echo "请查看 .github/workflows/ 目录中的工作流配置"
 
 # 性能和缓存
 cache-info: ## 显示缓存信息

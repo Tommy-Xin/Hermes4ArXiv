@@ -58,12 +58,29 @@ Thumbs.db
 
 # Project specific
 src/papers/*.pdf
+src/papers/
 src/logs/*.log
+src/logs/
+logs/
 *.tmp
 *.temp
 
-# uv
+# Generated files
+src/template_preview.html
+src/conclusion.md
+*.backup
+*.bak
+*.orig
+*.rej
+
+# AI API response cache (if implemented)
+.cache/
+cache/
+*.cache
+
+# uv package manager
 .uv_cache/
+uv.lock.backup
 
 # Local configuration
 .env.local
@@ -71,4 +88,34 @@ config.local.py
 
 # Temporary analysis files
 analysis_output.md
-temp_*.md 
+temp_*.md
+*_preview.html
+*_test.html
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+
+# Backup files from scripts
+*_backup/
+backup_*/
+NEW_REPOSITORY_SETUP_GUIDE.md
+PROJECT_REBUILD_SUMMARY.md
+
+# Runtime files
+*.pid
+*.lock
+.env.production
+.env.staging
+
+# Performance profiling
+*.prof
+*.pstats
+
+# Jupyter notebooks (if added later)
+.ipynb_checkpoints/
+*.ipynb
+
+# macOS specific
+.AppleDouble
+.LSOverride 
