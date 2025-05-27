@@ -99,8 +99,14 @@ status: ## 显示项目状态报告
 validate-env: ## 验证环境变量配置
 	uv run scripts/validate_env.py
 
+validate-env-local: ## 🏠 本地环境验证（跳过SMTP测试）
+	uv run scripts/validate_env_local.py
+
 test-workflows: ## 🔍 分析和测试工作流配置
 	uv run scripts/test_workflows.py
+
+cleanup-workflows: ## 🧹 清理不需要的工作流（节省资源）
+	uv run scripts/cleanup_workflows.py
 
 # uv 工具管理
 install-tools: ## 安装常用开发工具
