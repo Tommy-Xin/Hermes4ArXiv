@@ -98,6 +98,7 @@ make quick-start
 **📋 配置指南**：
 - [📖 用户部署指南](DEPLOY_FOR_USERS.md) - 完整部署流程
 - [📧 Gmail 配置指南](GMAIL_SETUP_GUIDE.md) - Gmail 专用配置（推荐）
+- [🧪 完整测试指南](TESTING_GUIDE.md) - 本地和 GitHub Actions 测试
 - [🔐 安全说明](SECURITY.md) - 安全保障说明
 
 ### 方式二: 本地开发

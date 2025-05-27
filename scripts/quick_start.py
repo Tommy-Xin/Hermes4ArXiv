@@ -151,23 +151,30 @@ def create_env_file(config):
     env_content = f"""# ArXiv 论文追踪器配置文件
 # 请勿将此文件提交到 Git
 
-# DeepSeek API 配置
+# =============================================================================
+# AI API 配置
+# =============================================================================
 DEEPSEEK_API_KEY={config['api_key']}
 
-# Gmail SMTP 配置
+# =============================================================================
+# 邮件服务配置
+# =============================================================================
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME={config['gmail']}
 SMTP_PASSWORD={config['app_password']}
-
-# 邮件配置
 EMAIL_FROM={config['gmail']}
 EMAIL_TO={config['recipient']}
 
-# 可选配置
+# =============================================================================
+# 可选配置（有默认值，通常不需要修改）
+# =============================================================================
 MAX_PAPERS=50
 SEARCH_DAYS=2
 CATEGORIES=cs.AI,cs.LG,cs.CL
+AI_MODEL=deepseek-chat
+API_RETRY_TIMES=3
+API_DELAY=2
 """
     
     env_path = Path('.env')

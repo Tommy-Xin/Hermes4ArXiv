@@ -13,6 +13,20 @@ import sys
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from pathlib import Path
+
+# 尝试加载 .env 文件
+try:
+    from dotenv import load_dotenv
+    # 查找 .env 文件（在项目根目录）
+    env_path = Path(__file__).parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"📄 已加载环境变量文件: {env_path}")
+    else:
+        print("⚠️  未找到 .env 文件，使用系统环境变量")
+except ImportError:
+    print("⚠️  python-dotenv 未安装，使用系统环境变量")
 
 def check_required_env_vars():
     """检查必需的环境变量"""

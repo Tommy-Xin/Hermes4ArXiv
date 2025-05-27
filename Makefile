@@ -8,6 +8,17 @@ quick-start: ## 🚀 运行快速开始向导（推荐新用户）
 	@echo "🚀 启动快速开始向导..."
 	cd scripts && uv run quick_start.py
 
+setup-local-env: ## 📝 创建本地环境变量文件
+	@if [ ! -f .env ]; then \
+		echo "📝 创建本地环境变量文件..."; \
+		cp env.example .env; \
+		echo "✅ 已创建 .env 文件，请编辑并填入您的配置信息"; \
+		echo "💡 提示：使用 'make validate-env' 验证配置"; \
+		echo "📧 Gmail 配置指南：GMAIL_SETUP_GUIDE.md"; \
+	else \
+		echo "⚠️  .env 文件已存在，跳过创建"; \
+	fi
+
 install: ## 安装生产依赖
 	uv sync --frozen
 
@@ -87,6 +98,9 @@ status: ## 显示项目状态报告
 
 validate-env: ## 验证环境变量配置
 	uv run scripts/validate_env.py
+
+test-workflows: ## 🔍 分析和测试工作流配置
+	uv run scripts/test_workflows.py
 
 # uv 工具管理
 install-tools: ## 安装常用开发工具
