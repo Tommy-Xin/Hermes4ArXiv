@@ -97,7 +97,7 @@ jobs:
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
         
         # 🔧 可选配置
-        MAX_PAPERS: ${{ secrets.MAX_PAPERS || '10' }}  # SOTA模型建议减少数量控制成本
+        MAX_PAPERS: ${{ secrets.MAX_PAPERS || '50' }}  # 默认50篇论文，可通过Secrets自定义
         SEARCH_DAYS: ${{ secrets.SEARCH_DAYS || '2' }}
         ANALYSIS_TYPE: ${{ secrets.ANALYSIS_TYPE || 'comprehensive' }}
         GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
