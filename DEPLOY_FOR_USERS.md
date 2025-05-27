@@ -17,13 +17,35 @@
 - 您的 API 费用和邮箱完全私有
 - 代码是开源的，但配置是私有的
 
-## 🎯 一键部署流程
+## 🎯 部署方式选择
 
-### 步骤 1: Fork 项目
+### 🚀 方式一: 交互式快速开始（推荐新手）
+
+这是最简单的方式，向导会引导您完成所有配置：
+
+```bash
+# 1. Fork 并克隆项目
+git clone https://github.com/你的用户名/arxiv_paper_tracker.git
+cd arxiv_paper_tracker
+
+# 2. 运行快速开始向导
+make quick-start
+```
+
+快速开始向导将自动：
+- 引导您设置 Gmail 两步验证
+- 帮助生成应用专用密码
+- 收集 DeepSeek API 密钥
+- 生成 GitHub Secrets 配置命令
+- 运行配置验证测试
+
+### 📋 方式二: 手动配置（适合有经验的用户）
+
+#### 步骤 1: Fork 项目
 1. 点击本仓库右上角的 **Fork** 按钮
 2. 创建您自己的副本
 
-### 步骤 2: 配置 GitHub Secrets
+#### 步骤 2: 配置 GitHub Secrets
 在您的 Fork 仓库中：
 
 1. 进入 **Settings** → **Secrets and variables** → **Actions**
@@ -39,18 +61,18 @@
 | `EMAIL_FROM` | 发件人邮箱 | `your-email@qq.com` |
 | `EMAIL_TO` | 收件人邮箱 | `recipient@example.com` |
 
-### 步骤 3: 验证配置
+#### 步骤 3: 验证配置
 1. 进入 **Actions** 页面
 2. 选择 **🚀 一键设置 ArXiv 论文追踪器**
 3. 点击 **Run workflow**
 4. 选择 **check_secrets** 检查配置
 
-### 步骤 4: 测试运行
+#### 步骤 4: 测试运行
 1. 配置验证通过后，再次运行工作流
 2. 选择 **test_configuration** 测试配置
 3. 选择 **run_analysis** 运行测试分析
 
-### 步骤 5: 启用自动化
+#### 步骤 5: 启用自动化
 配置成功后，系统将：
 - ✅ 每天早上 8:00 自动运行
 - ✅ 发送论文分析邮件到您的邮箱
@@ -78,12 +100,25 @@
    - EMAIL_FROM: 您的 QQ 邮箱
    - EMAIL_TO: 接收论文的邮箱
 
-### 3. 其他邮箱服务商
+### 3. Gmail 配置（推荐）
+Gmail 是最常用的邮箱服务，但需要特殊配置：
+
+**📋 详细配置指南**: 请查看 [Gmail 配置详细指南](GMAIL_SETUP_GUIDE.md)
+
+**快速配置步骤**：
+1. 启用 Google 账户的两步验证
+2. 生成应用专用密码
+3. 使用以下配置：
+   - SMTP_SERVER: `smtp.gmail.com`
+   - SMTP_USERNAME: 您的完整 Gmail 地址
+   - SMTP_PASSWORD: 生成的应用专用密码（不是登录密码！）
+
+### 4. 其他邮箱服务商
 | 服务商 | SMTP 服务器 | 端口 | 说明 |
 |--------|-------------|------|------|
 | QQ 邮箱 | smtp.qq.com | 587 | 需要开启 SMTP 并生成授权码 |
 | 163 邮箱 | smtp.163.com | 587 | 需要开启 SMTP 并设置客户端授权密码 |
-| Gmail | smtp.gmail.com | 587 | 需要开启两步验证并生成应用专用密码 |
+| Gmail | smtp.gmail.com | 587 | **推荐** - 详见 Gmail 配置指南 |
 | Outlook | smtp-mail.outlook.com | 587 | 需要开启两步验证 |
 
 ## 💰 成本估算

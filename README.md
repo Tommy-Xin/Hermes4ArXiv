@@ -2,6 +2,8 @@
 
 一个基于 GitHub Actions 的自动化工具，每天自动追踪和分析 arXiv 最新论文，并通过邮件发送美化的分析报告。该工具采用模块化架构，支持多种AI API和美化的输出格式。
 
+> 🚀 **新用户？** 查看 [快速开始总结](QUICK_START_SUMMARY.md) 了解 5 分钟配置流程！
+
 ## ✨ 新功能特点
 
 ### 🏗️ 模块化架构
@@ -72,12 +74,31 @@ arxiv_paper_tracker/
 
 ## 🚀 快速部署（推荐）
 
-### 方式一: 一键部署到 GitHub Actions
+### 方式一: 交互式快速开始（最简单）
+```bash
+# 1. Fork 并克隆项目
+git clone https://github.com/你的用户名/arxiv_paper_tracker.git
+cd arxiv_paper_tracker
+
+# 2. 运行快速开始向导
+make quick-start
+```
+
+快速开始向导将：
+- 🔐 引导您设置 Gmail 两步验证和应用专用密码
+- 📝 收集所有必需的配置信息
+- 🔧 生成 GitHub Secrets 设置命令
+- 🧪 运行配置验证测试
+
+### 方式二: 手动部署到 GitHub Actions
 1. **Fork 此仓库** 到您的 GitHub 账号
 2. **配置 Secrets**: Settings → Secrets and variables → Actions
 3. **运行设置向导**: Actions → 🚀 一键设置 ArXiv 论文追踪器
 
-详细步骤请查看：[📖 用户部署指南](DEPLOY_FOR_USERS.md)
+**📋 配置指南**：
+- [📖 用户部署指南](DEPLOY_FOR_USERS.md) - 完整部署流程
+- [📧 Gmail 配置指南](GMAIL_SETUP_GUIDE.md) - Gmail 专用配置（推荐）
+- [🔐 安全说明](SECURITY.md) - 安全保障说明
 
 ### 方式二: 本地开发
 

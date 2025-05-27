@@ -116,9 +116,10 @@ jobs:
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
       run: |
-        echo "🔍 运行配置验证..."
-        uv run scripts/validate_env.py
+        echo "🔍 运行配置验证和测试..."
+        cd scripts && uv run validate_env.py
 
   run-test-analysis:
     runs-on: ubuntu-latest

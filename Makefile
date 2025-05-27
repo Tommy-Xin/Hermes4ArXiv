@@ -4,6 +4,10 @@ help: ## 显示帮助信息
 	@echo "可用命令:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
+quick-start: ## 🚀 运行快速开始向导（推荐新用户）
+	@echo "🚀 启动快速开始向导..."
+	cd scripts && uv run quick_start.py
+
 install: ## 安装生产依赖
 	uv sync --frozen
 
