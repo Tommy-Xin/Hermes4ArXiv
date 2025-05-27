@@ -24,6 +24,12 @@ class Config:
         # 移除不间断空格和其他不可见字符
         return value.replace('\xa0', ' ').strip()
 
+    def _safe_int(self, value: str, default: str) -> int:
+        """安全的整数转换，处理空字符串和None"""
+        if not value or not value.strip():
+            return int(default)
+        return int(value.strip())
+
     def __init__(self):
         """初始化配置，从环境变量读取"""
         # AI API配置
@@ -49,13 +55,12 @@ class Config:
         self.PREFERRED_AI_MODEL = os.getenv("PREFERRED_AI_MODEL", "").lower().strip()  # deepseek, openai, claude, gemini
         
         # 失败检测和处理配置
-        self.MAX_CONSECUTIVE_FAILURES = int(os.getenv("MAX_CONSECUTIVE_FAILURES", "3"))  # 最大连续失败次数
-        self.FAILURE_RESET_TIME = int(os.getenv("FAILURE_RESET_TIME", "300"))  # 失败计数重置时间（秒）
+        self.MAX_CONSECUTIVE_FAILURES = self._safe_int(os.getenv("MAX_CONSECUTIVE_FAILURES"), "3")  # 最大连续失败次数
+        self.FAILURE_RESET_TIME = self._safe_int(os.getenv("FAILURE_RESET_TIME"), "300")  # 失败计数重置时间（秒）
 
         # 邮件配置
         self.SMTP_SERVER = os.getenv("SMTP_SERVER")
-        smtp_port = os.getenv("SMTP_PORT", "587").strip()
-        self.SMTP_PORT = int(smtp_port) if smtp_port else 587
+        self.SMTP_PORT = self._safe_int(os.getenv("SMTP_PORT"), "587")
         self.SMTP_USERNAME = self._clean_string(os.getenv("SMTP_USERNAME"))
         self.SMTP_PASSWORD = self._clean_string(os.getenv("SMTP_PASSWORD"))
         self.EMAIL_FROM = os.getenv("EMAIL_FROM")
@@ -72,8 +77,8 @@ class Config:
         # ArXiv搜索配置
         categories_str = os.getenv("CATEGORIES", "cs.AI,cs.LG,cs.CL")
         self.CATEGORIES = [cat.strip() for cat in categories_str.split(",") if cat.strip()]
-        self.MAX_PAPERS = int(os.getenv("MAX_PAPERS", "50"))
-        self.SEARCH_DAYS = int(os.getenv("SEARCH_DAYS", "2"))
+        self.MAX_PAPERS = self._safe_int(os.getenv("MAX_PAPERS"), "50")
+        self.SEARCH_DAYS = self._safe_int(os.getenv("SEARCH_DAYS"), "2")
 
         # AI分析配置
         self.AI_MODEL = "deepseek-chat"
@@ -82,13 +87,8 @@ class Config:
 
         # 并行处理配置
         self.ENABLE_PARALLEL = os.getenv("ENABLE_PARALLEL", "true").lower() == "true"
-        self.MAX_WORKERS = int(os.getenv("MAX_WORKERS", "0"))  # 0表示自动计算
-        self.BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
-
-        # 并行处理配置
-        self.ENABLE_PARALLEL = os.getenv("ENABLE_PARALLEL", "true").lower() == "true"
-        self.MAX_WORKERS = int(os.getenv("MAX_WORKERS", "0"))  # 0表示自动计算
-        self.BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
+        self.MAX_WORKERS = self._safe_int(os.getenv("MAX_WORKERS"), "0")  # 0表示自动计算
+        self.BATCH_SIZE = self._safe_int(os.getenv("BATCH_SIZE"), "20")
 
         # 输出配置
         self.OUTPUT_FORMAT = "markdown"  # 输出格式：markdown, html
