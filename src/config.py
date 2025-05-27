@@ -25,7 +25,8 @@ class Config:
 
         # 邮件配置
         self.SMTP_SERVER = os.getenv("SMTP_SERVER")
-        self.SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+        smtp_port = os.getenv("SMTP_PORT", "587").strip()
+        self.SMTP_PORT = int(smtp_port) if smtp_port else 587
         self.SMTP_USERNAME = os.getenv("SMTP_USERNAME")
         self.SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
         self.EMAIL_FROM = os.getenv("EMAIL_FROM")

@@ -57,7 +57,8 @@ def test_smtp_connection():
     """测试 SMTP 连接"""
     try:
         smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-        smtp_port = int(os.getenv('SMTP_PORT', '587'))
+        smtp_port_str = os.getenv('SMTP_PORT', '587').strip()
+        smtp_port = int(smtp_port_str) if smtp_port_str else 587
         username = os.getenv('SMTP_USERNAME')
         password = os.getenv('SMTP_PASSWORD')
         
@@ -92,7 +93,8 @@ def send_test_email():
     """发送测试邮件"""
     try:
         smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-        smtp_port = int(os.getenv('SMTP_PORT', '587'))
+        smtp_port_str = os.getenv('SMTP_PORT', '587').strip()
+        smtp_port = int(smtp_port_str) if smtp_port_str else 587
         username = os.getenv('SMTP_USERNAME')
         password = os.getenv('SMTP_PASSWORD')
         email_from = os.getenv('EMAIL_FROM')
