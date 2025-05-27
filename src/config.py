@@ -26,9 +26,25 @@ class Config:
 
     def __init__(self):
         """初始化配置，从环境变量读取"""
-        # API配置
+        # AI API配置
         self.DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
         self.DEEPSEEK_API_BASE = "https://api.deepseek.com/v1"
+        self.DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        
+        # 多AI支持
+        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        self.OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+        
+        self.CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
+        self.CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-haiku-20240307")
+        
+        self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+        self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-pro")
+        
+        # AI分析策略配置
+        self.ANALYSIS_STRATEGY = os.getenv("ANALYSIS_STRATEGY", "fallback")
+        self.AI_FALLBACK_ORDER = os.getenv("AI_FALLBACK_ORDER", "deepseek,openai,claude,gemini")
+        self.ANALYSIS_TYPE = os.getenv("ANALYSIS_TYPE", "comprehensive")
 
         # 邮件配置
         self.SMTP_SERVER = os.getenv("SMTP_SERVER")

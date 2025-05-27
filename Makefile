@@ -64,6 +64,9 @@ run: ## 运行主程序
 test-components: ## 运行组件测试
 	cd src && uv run python test_components.py
 
+test-multi-ai: ## 测试多AI分析器功能
+	cd src && uv run python test_multi_ai.py
+
 preview-template: ## 生成HTML邮件模板预览
 	uv run python src/preview_template.py
 

@@ -51,14 +51,9 @@ class ArxivPaperTracker:
                 search_days=self.config.SEARCH_DAYS,
             )
 
-            # 初始化AI分析器
-            self.ai_analyzer = AnalyzerFactory.create_analyzer(
-                "deepseek",
-                api_key=self.config.DEEPSEEK_API_KEY,
-                model=self.config.AI_MODEL,
-                retry_times=self.config.API_RETRY_TIMES,
-                delay=self.config.API_DELAY,
-            )
+            # 初始化AI分析器（支持多AI）
+            from ai_analyzer_adapter import create_ai_analyzer
+            self.ai_analyzer = create_ai_analyzer(self.config)
 
             # 初始化输出格式化器
             self.output_formatter = OutputFormatter(self.config.TEMPLATES_DIR, self.config.GITHUB_REPO_URL)
