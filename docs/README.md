@@ -1,33 +1,34 @@
-# 文档索引
+# 📚 文档指南
 
-本目录包含Hermes4ArXiv项目的核心文档。
+## 🎯 核心文档
 
-## 📁 目录结构
+### 📧 邮件配置
+- **[Gmail设置指南](setup/GMAIL_SETUP_GUIDE.md)** - Gmail SMTP配置详细步骤
+- **[安全配置](setup/SECURITY.md)** - 密钥管理和安全最佳实践
 
-### 🚀 setup/ - 部署和配置
-- `GMAIL_SETUP_GUIDE.md` - Gmail配置指南
-- `SECURITY.md` - 安全保障说明
-- `TEMPLATE_PREVIEW_GUIDE.md` - 邮件模板预览指南
-- `MULTI_AI_GUIDE.md` - 多AI分析器使用指南
+### 🤖 AI模型配置  
+- **[SOTA模型指南](setup/SOTA_MODELS_GUIDE.md)** - 顶级AI模型配置和对比
+- **[多AI支持](setup/MULTI_AI_GUIDE.md)** - 多个AI提供商配置和使用
 
-### 🔧 development/ - 开发和优化
-- `TESTING_GUIDE.md` - 测试指南
-- `PARALLEL_OPTIMIZATION_GUIDE.md` - 并行优化指南
-- `CACHE_ISSUES_GUIDE.md` - GitHub Actions缓存问题解决指南
+### 🎨 功能扩展
+- **[模板预览指南](setup/TEMPLATE_PREVIEW_GUIDE.md)** - 邮件模板自定义和预览
 
-### 🗄️ archive/ - 归档文档
-存放已过时或冗余的文档。
+## 🚀 快速开始
 
-## 🔗 快速链接
+1. **第一次使用？** 
+   - 参考 [主README](../README.md) 开始配置
+   - 按照 [Gmail设置指南](setup/GMAIL_SETUP_GUIDE.md) 配置邮件
 
-- **新用户**: 从根目录的 [5分钟部署指南](../QUICK_DEPLOY.md) 开始
-- **Gmail配置**: 参考 [Gmail设置](setup/GMAIL_SETUP_GUIDE.md)
-- **多AI功能**: 查看 [多AI分析器指南](setup/MULTI_AI_GUIDE.md)
-- **模板预览**: 查看 [邮件模板预览指南](setup/TEMPLATE_PREVIEW_GUIDE.md)
-- **安全说明**: 查看 [安全保障](setup/SECURITY.md)
-- **性能优化**: 阅读 [并行优化指南](development/PARALLEL_OPTIMIZATION_GUIDE.md)
-- **缓存问题**: 解决 [GitHub Actions缓存问题](development/CACHE_ISSUES_GUIDE.md)
+2. **已有配置？**
+   - 查看 [SOTA模型指南](setup/SOTA_MODELS_GUIDE.md) 升级到更强AI模型
+   - 使用 [多AI支持](setup/MULTI_AI_GUIDE.md) 配置多个AI提供商
 
-## 📝 文档维护
+3. **自定义需求？**
+   - 通过 [模板预览指南](setup/TEMPLATE_PREVIEW_GUIDE.md) 自定义邮件模板
+   - 参考 [安全配置](setup/SECURITY.md) 确保最佳安全实践
 
-文档按功能分类组织，便于查找和维护。如需添加新文档，请放入相应的分类目录。
+## 💡 提示
+
+- 📝 所有文档都包含详细的步骤说明和故障排除
+- 🔧 简化版本专注于核心功能，易于配置和维护
+- 🚀 v2.1版本移除了复杂配置，更适合个人用户

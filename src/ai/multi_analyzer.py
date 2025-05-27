@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Dict, List, Optional, Tuple, Any
 import arxiv
 
-from ai.prompts import PromptManager
+from .prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
@@ -315,7 +315,22 @@ class MultiAIAnalyzer:
             return AnalysisStrategy.FALLBACK
     
     def _parse_fallback_order(self) -> List[AIProvider]:
-        """解析使用顺序 - 自动选择配置的模型"""
+        """解析使用顺序 - 支持用户指定优先模型"""
+        
+        # 🎯 优先检查用户指定的模型
+        preferred_model = self.config.get('PREFERRED_AI_MODEL', '').lower().strip()
+        if preferred_model:
+            try:
+                preferred_provider = AIProvider(preferred_model)
+                # 检查该模型是否可用
+                if self.config.get(f'{preferred_model.upper()}_API_KEY'):
+                    logger.info(f"🎯 使用用户指定的AI模型: {preferred_model}")
+                    return [preferred_provider]  # 只使用用户指定的模型
+                else:
+                    logger.warning(f"⚠️ 用户指定的模型 {preferred_model} 没有配置API密钥，使用自动选择")
+            except ValueError:
+                logger.warning(f"⚠️ 用户指定的模型 {preferred_model} 不支持，使用自动选择")
+        
         # SOTA模型优先级顺序（2025年5月最新）
         sota_priority = ['claude', 'gemini', 'openai', 'deepseek']
         
@@ -333,14 +348,14 @@ class MultiAIAnalyzer:
         if self.config.get('AI_FALLBACK_ORDER'):
             order_str = self.config.get('AI_FALLBACK_ORDER')
             user_order = []
-        for provider_name in order_str.split(','):
-            provider_name = provider_name.strip().lower()
-            try:
-                provider = AIProvider(provider_name)
+            for provider_name in order_str.split(','):
+                provider_name = provider_name.strip().lower()
+                try:
+                    provider = AIProvider(provider_name)
                     if provider in available_providers:
                         user_order.append(provider)
-            except ValueError:
-                logger.warning(f"未知的AI提供商: {provider_name}")
+                except ValueError:
+                    logger.warning(f"未知的AI提供商: {provider_name}")
             if user_order:
                 return user_order
         
@@ -362,7 +377,7 @@ class MultiAIAnalyzer:
         if self.config.get('OPENAI_API_KEY'):
             self.analyzers[AIProvider.OPENAI] = OpenAIAnalyzer(
                 api_key=self.config['OPENAI_API_KEY'],
-                model=self.config.get('OPENAI_MODEL', 'o3-2025-04-16'),  # 使用最新的o3推理模型
+                model=self.config.get('OPENAI_MODEL', 'o3-2025-04-16'),
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
                 delay=self.config.get('API_DELAY', 2)
             )
@@ -371,7 +386,7 @@ class MultiAIAnalyzer:
         if self.config.get('CLAUDE_API_KEY'):
             self.analyzers[AIProvider.CLAUDE] = ClaudeAnalyzer(
                 api_key=self.config['CLAUDE_API_KEY'],
-                model=self.config.get('CLAUDE_MODEL', 'claude-opus-4-20250514'),  # 最新的Claude Opus 4模型
+                model=self.config.get('CLAUDE_MODEL', 'claude-opus-4-20250514'),
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
                 delay=self.config.get('API_DELAY', 2)
             )
@@ -380,7 +395,7 @@ class MultiAIAnalyzer:
         if self.config.get('GEMINI_API_KEY'):
             self.analyzers[AIProvider.GEMINI] = GeminiAnalyzer(
                 api_key=self.config['GEMINI_API_KEY'],
-                model=self.config.get('GEMINI_MODEL', 'gemini-2.5-pro-preview-05-06'),  # 最新的Gemini 2.5 Pro Preview
+                model=self.config.get('GEMINI_MODEL', 'gemini-2.5-pro-preview-05-06'),
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
                 delay=self.config.get('API_DELAY', 2)
             )
@@ -404,12 +419,6 @@ class MultiAIAnalyzer:
         """
         if self.strategy == AnalysisStrategy.FALLBACK:
             return await self._analyze_with_fallback(paper, analysis_type)
-        elif self.strategy == AnalysisStrategy.PARALLEL:
-            return await self._analyze_with_parallel(paper, analysis_type)
-        elif self.strategy == AnalysisStrategy.CONSENSUS:
-            return await self._analyze_with_consensus(paper, analysis_type)
-        elif self.strategy == AnalysisStrategy.BEST_EFFORT:
-            return await self._analyze_with_best_effort(paper, analysis_type)
         else:
             return await self._analyze_with_fallback(paper, analysis_type)
     
@@ -445,130 +454,6 @@ class MultiAIAnalyzer:
             'timestamp': time.time(),
             'html_analysis': PromptManager.format_analysis_for_html(PromptManager.get_error_analysis(str(last_error))),
             'error': str(last_error)
-        }
-    
-    async def _analyze_with_parallel(self, paper: arxiv.Result, analysis_type: str) -> Dict[str, Any]:
-        """使用并行策略分析论文"""
-        available_analyzers = [(provider, analyzer) for provider, analyzer in self.analyzers.items() 
-                              if analyzer.is_available()]
-        
-        if not available_analyzers:
-            error_msg = "没有可用的AI分析器"
-            return {
-                'analysis': PromptManager.get_error_analysis(error_msg),
-                'provider': 'error',
-                'model': 'none',
-                'timestamp': time.time(),
-                'html_analysis': PromptManager.format_analysis_for_html(PromptManager.get_error_analysis(error_msg)),
-                'error': error_msg
-            }
-        
-        # 并行调用所有可用的分析器
-        tasks = []
-        for provider, analyzer in available_analyzers:
-            task = asyncio.create_task(analyzer.analyze_paper(paper, analysis_type))
-            tasks.append((provider, task))
-        
-        # 等待第一个成功的结果
-        for provider, task in tasks:
-            try:
-                result = await task
-                logger.info(f"✅ 并行分析成功，使用 {provider.value} 的结果")
-                
-                # 取消其他任务
-                for other_provider, other_task in tasks:
-                    if other_provider != provider and not other_task.done():
-                        other_task.cancel()
-                
-                return result
-                
-            except Exception as e:
-                logger.warning(f"❌ {provider.value} 并行分析失败: {e}")
-                continue
-        
-        # 所有并行任务都失败了
-        error_msg = "所有并行分析任务都失败了"
-        return {
-            'analysis': PromptManager.get_error_analysis(error_msg),
-            'provider': 'error',
-            'model': 'none',
-            'timestamp': time.time(),
-            'html_analysis': PromptManager.format_analysis_for_html(PromptManager.get_error_analysis(error_msg)),
-            'error': error_msg
-        }
-    
-    async def _analyze_with_consensus(self, paper: arxiv.Result, analysis_type: str, min_consensus: int = 2) -> Dict[str, Any]:
-        """使用共识策略分析论文"""
-        available_analyzers = [(provider, analyzer) for provider, analyzer in self.analyzers.items() 
-                              if analyzer.is_available()]
-        
-        if len(available_analyzers) < min_consensus:
-            logger.warning(f"可用分析器数量({len(available_analyzers)})少于最小共识数量({min_consensus})，降级为fallback策略")
-            return await self._analyze_with_fallback(paper, analysis_type)
-        
-        # 并行调用多个分析器
-        tasks = []
-        for provider, analyzer in available_analyzers[:3]:  # 最多使用前3个
-            task = asyncio.create_task(analyzer.analyze_paper(paper, analysis_type))
-            tasks.append((provider, task))
-        
-        # 收集结果
-        results = []
-        for provider, task in tasks:
-            try:
-                result = await task
-                results.append(result)
-                logger.info(f"✅ {provider.value} 共识分析完成")
-            except Exception as e:
-                logger.warning(f"❌ {provider.value} 共识分析失败: {e}")
-        
-        if len(results) < min_consensus:
-            error_msg = f"无法达成共识，只有 {len(results)} 个成功结果，需要至少 {min_consensus} 个"
-            return {
-                'analysis': PromptManager.get_error_analysis(error_msg),
-                'provider': 'error',
-                'model': 'none',
-                'timestamp': time.time(),
-                'html_analysis': PromptManager.format_analysis_for_html(PromptManager.get_error_analysis(error_msg)),
-                'error': error_msg
-            }
-        
-        # 合并结果（简化版本：使用第一个结果，但记录所有提供商）
-        merged_result = results[0].copy()
-        merged_result['providers'] = [r['provider'] for r in results]
-        merged_result['consensus_count'] = len(results)
-        merged_result['provider'] = f"consensus({len(results)})"
-        
-        logger.info(f"✅ 共识分析成功，使用了 {len(results)} 个分析器的结果")
-        return merged_result
-    
-    async def _analyze_with_best_effort(self, paper: arxiv.Result, analysis_type: str) -> Dict[str, Any]:
-        """使用尽力而为策略分析论文"""
-        # 先尝试降级策略
-        try:
-            result = await self._analyze_with_fallback(paper, analysis_type)
-            if result.get('provider') != 'error':
-                return result
-        except Exception:
-            pass
-        
-        # 如果降级策略失败，尝试并行策略
-        try:
-            result = await self._analyze_with_parallel(paper, analysis_type)
-            if result.get('provider') != 'error':
-                return result
-        except Exception:
-            pass
-        
-        # 最后的降级方案
-        error_msg = "所有分析策略都失败了"
-        return {
-            'analysis': PromptManager.get_error_analysis(error_msg),
-            'provider': 'error',
-            'model': 'none',
-            'timestamp': time.time(),
-            'html_analysis': PromptManager.format_analysis_for_html(PromptManager.get_error_analysis(error_msg)),
-            'error': error_msg
         }
     
     def get_analyzer_status(self) -> Dict[str, Any]:

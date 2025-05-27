@@ -44,18 +44,15 @@ class ArxivPaperTracker:
     def _initialize_components(self):
         """初始化各个组件"""
         try:
-            # 首先初始化AI分析器（质量筛选需要用到）
+            # 初始化AI分析器（用于论文质量评估和内容分析）
             from ai.adapter import create_ai_analyzer
             self.ai_analyzer = create_ai_analyzer(self.config)
             
-            # 初始化ArXiv客户端（支持质量筛选）
+            # 初始化ArXiv客户端（已移除质量筛选，改为AI分析阶段进行质量评估）
             self.arxiv_client = ArxivClient(
                 categories=self.config.CATEGORIES,
                 max_papers=self.config.MAX_PAPERS,
                 search_days=self.config.SEARCH_DAYS,
-                enable_quality_filter=getattr(self.config, 'ENABLE_QUALITY_FILTER', True),
-                quality_threshold=getattr(self.config, 'QUALITY_THRESHOLD', 65.0),
-                ai_analyzer=self.ai_analyzer,
             )
 
             # AI分析器已在上面初始化

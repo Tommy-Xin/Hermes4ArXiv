@@ -31,14 +31,7 @@ env.bak/
 venv.bak/
 
 # Testing
-.coverage
 .pytest_cache/
-.tox/
-.nox/
-coverage.xml
-*.cover
-.hypothesis/
-htmlcov/
 
 # IDEs
 .vscode/
@@ -94,29 +87,9 @@ temp_*.md
 *_preview.html
 *_test.html
 
-# Documentation builds
-docs/_build/
-docs/.doctrees/
-
-# Backup files from scripts
+# Backup files from scripts  
 *_backup/
 backup_*/
-NEW_REPOSITORY_SETUP_GUIDE.md
-PROJECT_REBUILD_SUMMARY.md
-
-# Runtime files
-*.pid
-*.lock
-.env.production
-.env.staging
-
-# Performance profiling
-*.prof
-*.pstats
-
-# Jupyter notebooks (if added later)
-.ipynb_checkpoints/
-*.ipynb
 
 # macOS specific
 .AppleDouble

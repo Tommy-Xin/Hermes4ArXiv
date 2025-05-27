@@ -45,6 +45,9 @@ class Config:
         self.ANALYSIS_STRATEGY = os.getenv("ANALYSIS_STRATEGY", "fallback")
         self.AI_FALLBACK_ORDER = os.getenv("AI_FALLBACK_ORDER", "deepseek,openai,claude,gemini")
         self.ANALYSIS_TYPE = os.getenv("ANALYSIS_TYPE", "comprehensive")
+        
+        # 🎯 用户指定使用的AI模型 (优先级最高)
+        self.PREFERRED_AI_MODEL = os.getenv("PREFERRED_AI_MODEL", "").lower().strip()  # deepseek, openai, claude, gemini
 
         # 邮件配置
         self.SMTP_SERVER = os.getenv("SMTP_SERVER")
@@ -68,10 +71,6 @@ class Config:
         self.CATEGORIES = [cat.strip() for cat in categories_str.split(",") if cat.strip()]
         self.MAX_PAPERS = int(os.getenv("MAX_PAPERS", "50"))
         self.SEARCH_DAYS = int(os.getenv("SEARCH_DAYS", "2"))
-        
-        # 📊 论文质量筛选配置
-        self.ENABLE_QUALITY_FILTER = os.getenv("ENABLE_QUALITY_FILTER", "true").lower() == "true"
-        self.QUALITY_THRESHOLD = float(os.getenv("QUALITY_THRESHOLD", "65.0"))
 
         # AI分析配置
         self.AI_MODEL = "deepseek-chat"
@@ -97,23 +96,51 @@ class Config:
 
     def validate(self) -> bool:
         """验证配置是否完整"""
-        required_configs = [
+        # 检查至少有一个AI API密钥
+        ai_apis = [
             self.DEEPSEEK_API_KEY,
+            self.OPENAI_API_KEY,
+            self.CLAUDE_API_KEY,
+            self.GEMINI_API_KEY
+        ]
+        
+        if not any(ai_apis):
+            print("❌ 至少需要配置一个AI API密钥：DEEPSEEK_API_KEY, OPENAI_API_KEY, CLAUDE_API_KEY, 或 GEMINI_API_KEY")
+            return False
+        
+        # 检查邮件配置
+        required_email_configs = [
             self.SMTP_SERVER,
             self.SMTP_USERNAME,
             self.SMTP_PASSWORD,
             self.EMAIL_FROM,
         ]
 
-        missing_configs = [config for config in required_configs if not config]
+        missing_email_configs = [config for config in required_email_configs if not config]
 
-        if missing_configs:
-            print(f"缺少必要配置: {missing_configs}")
+        if missing_email_configs:
+            print(f"❌ 缺少必要的邮件配置: {missing_email_configs}")
             return False
 
         if not self.EMAIL_TO:
-            print("缺少收件人邮箱配置")
+            print("❌ 缺少收件人邮箱配置 (EMAIL_TO)")
             return False
+
+        # 显示配置的AI模型
+        configured_ais = []
+        if self.DEEPSEEK_API_KEY:
+            configured_ais.append("DeepSeek")
+        if self.OPENAI_API_KEY:
+            configured_ais.append("OpenAI")
+        if self.CLAUDE_API_KEY:
+            configured_ais.append("Claude")
+        if self.GEMINI_API_KEY:
+            configured_ais.append("Gemini")
+        
+        print(f"✅ 配置验证通过！已配置的AI模型: {', '.join(configured_ais)}")
+        
+        if self.PREFERRED_AI_MODEL:
+            print(f"🎯 用户指定使用: {self.PREFERRED_AI_MODEL.upper()}")
 
         return True
 

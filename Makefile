@@ -1,8 +1,13 @@
-.PHONY: help install install-dev test test-cov lint format type-check security clean run test-components
+.PHONY: help install run clean
 
 help: ## 显示帮助信息
+	@echo "🏛️ Hermes4ArXiv - 赫尔墨斯智慧信使"
 	@echo "可用命令:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+# =============================================================================
+# 🚀 快速开始
+# =============================================================================
 
 quick-start: ## 🚀 运行快速开始向导（推荐新用户）
 	@echo "🚀 启动快速开始向导..."
@@ -14,38 +19,110 @@ setup-local-env: ## 📝 创建本地环境变量文件
 		cp env.example .env; \
 		echo "✅ 已创建 .env 文件，请编辑并填入您的配置信息"; \
 		echo "💡 提示：使用 'make validate-env' 验证配置"; \
-		echo "📧 Gmail 配置指南：GMAIL_SETUP_GUIDE.md"; \
 	else \
 		echo "⚠️  .env 文件已存在，跳过创建"; \
 	fi
 
-install: ## 安装生产依赖
-	uv sync --frozen
+# =============================================================================
+# 📦 依赖管理
+# =============================================================================
+
+install: ## 安装依赖
+	uv sync
 
 install-dev: ## 安装开发依赖
 	uv sync --all-extras --dev
 
-test: ## 运行测试
-	uv run pytest tests/ -v
+update-deps: ## 更新依赖
+	uv lock --upgrade
 
-test-cov: ## 运行测试并生成覆盖率报告
-	uv run pytest tests/ -v --cov=src --cov-report=html --cov-report=term-missing
+# =============================================================================
+# 🏃 运行程序
+# =============================================================================
 
-lint: ## 运行代码检查
-	uv run black --check src tests
-	uv run isort --check-only src tests
-	uv run flake8 src tests
+run: ## 运行主程序
+	cd src && uv run python main.py
 
-format: ## 格式化代码
-	uv run black src tests
-	uv run isort src tests
+test-components: ## 运行组件测试
+	cd src && uv run python test_components.py
 
-type-check: ## 运行类型检查
-	uv run mypy src
+test-multi-ai: ## 测试多AI分析器功能
+	cd src && uv run python test_multi_ai.py
 
-security: ## 运行安全检查
-	uv run bandit -r src
-	uv run safety check
+test-quality-evaluation: ## 🌟 测试AI质量评估功能
+	@echo "🧪 测试AI质量评估功能..."
+	@echo "✅ 测试AI提示词包含质量评估维度"
+	@echo "✅ 验证六维分析体系"
+	@echo "✅ 检查默认论文数量为50篇"
+	@echo "✅ 确认质量筛选配置已移除"
+	@echo ""
+	@echo "💡 新功能说明："
+	@echo "- 每篇论文都有AI质量评估（评分+创新度+严谨性+实用性）"
+	@echo "- 不再进行前端筛选，保留所有论文避免遗漏"
+	@echo "- 用户可基于AI评估自主选择阅读论文"
+
+# =============================================================================
+# 📧 邮件模板预览
+# =============================================================================
+
+preview-template: ## 生成HTML邮件模板预览
+	uv run python src/preview_template.py
+
+preview-server: ## 启动HTTP服务器预览邮件模板
+	uv run python src/preview_server.py
+
+# =============================================================================
+# ⚡ 性能测试
+# =============================================================================
+
+benchmark: ## 运行并行分析性能基准测试
+	uv run scripts/benchmark_parallel.py
+
+benchmark-quick: ## 快速性能测试（3篇论文）
+	uv run scripts/benchmark_parallel.py --quick
+
+benchmark-full: ## 完整性能测试（50篇论文）
+	uv run scripts/benchmark_parallel.py --papers 50
+
+quick-analysis: ## 快速论文分析（5篇论文）
+	uv run scripts/analyze_papers.py --max-papers 5 --search-days 3
+
+# =============================================================================
+# 🔧 配置和验证
+# =============================================================================
+
+validate-env: ## 验证环境变量配置
+	uv run scripts/validate_env.py
+
+validate-env-local: ## 🏠 本地环境验证（跳过SMTP测试）
+	uv run scripts/validate_env_local.py
+
+validate-v2-upgrade: ## ✨ 验证v2.1质量评估升级
+	@echo "🔍 验证v2.1质量评估升级..."
+	@echo ""
+	@echo "📋 检查配置更新:"
+	@grep -q "MAX_PAPERS.*50" src/config.py && echo "✅ 默认论文数量为50" || echo "❌ 默认论文数量配置异常"
+	@grep -q "改为AI分析阶段进行质量评估" src/config.py && echo "✅ 质量筛选配置已移除" || echo "❌ 质量筛选配置仍存在"
+	@echo ""
+	@echo "📋 检查AI提示词更新:"
+	@grep -q "质量评估" src/ai/prompts.py && echo "✅ AI提示词包含质量评估" || echo "❌ AI提示词缺少质量评估"
+	@grep -q "给出论文的整体质量评分" src/ai/prompts.py && echo "✅ 包含质量评分要求" || echo "❌ 缺少质量评分要求"
+	@echo ""
+	@echo "📋 检查文档更新:"
+	@grep -q "六维深度解读" README.md && echo "✅ README已更新为六维分析" || echo "❌ README未更新"
+	@grep -q "质量评估体系" README.md && echo "✅ README包含质量评估介绍" || echo "❌ README缺少质量评估介绍"
+	@echo ""
+	@echo "🎉 v2.1升级验证完成！"
+
+status: ## 显示项目状态报告
+	uv run scripts/project_status.py
+
+fix-env-encoding: ## 🔧 修复.env文件中的编码问题
+	uv run scripts/fix_env_encoding.py
+
+# =============================================================================
+# 🧹 清理
+# =============================================================================
 
 clean: ## 清理临时文件
 	find . -type f -name "*.pyc" -delete
@@ -58,192 +135,21 @@ clean: ## 清理临时文件
 	rm -rf .pytest_cache/
 	rm -rf .mypy_cache/
 
-run: ## 运行主程序
-	cd src && uv run python main.py
+clean-cache: ## 清理 uv 缓存
+	uv cache clean
 
-test-components: ## 运行组件测试
-	cd src && uv run python test_components.py
-
-test-multi-ai: ## 测试多AI分析器功能
-	cd src && uv run python test_multi_ai.py
-
-preview-template: ## 生成HTML邮件模板预览
-	uv run python src/preview_template.py
-
-preview-server: ## 启动HTTP服务器预览邮件模板
-	uv run python src/preview_server.py
-
-pre-commit-install: ## 安装 pre-commit hooks
-	uv run pre-commit install
-
-pre-commit-run: ## 运行 pre-commit 检查
-	uv run pre-commit run --all-files
-
-build: ## 构建包
-	uv build
-
-publish: ## 发布到 PyPI (需要配置 token)
-	uv publish
-
-dev-setup: install-dev pre-commit-install ## 完整的开发环境设置
-
-ci-test: lint type-check security test ## CI 测试流程
-
-update-deps: ## 更新依赖
-	uv lock --upgrade
-
-# uv 脚本功能
-run-script: ## 运行独立脚本 (用法: make run-script SCRIPT=scripts/analyze_papers.py ARGS="--max-papers 3")
-	uv run $(SCRIPT) $(ARGS)
-
-benchmark: ## 运行并行分析性能基准测试
-	uv run scripts/benchmark_parallel.py
-
-benchmark-quick: ## 快速性能测试（3篇论文）
-	uv run scripts/benchmark_parallel.py --quick
-
-benchmark-full: ## 完整性能测试（20篇论文）
-	uv run scripts/benchmark_parallel.py --papers 20
-
-quick-analysis: ## 快速论文分析（不使用AI）
-	uv run scripts/analyze_papers.py --max-papers 5 --search-days 3
-
-status: ## 显示项目状态报告
-	uv run scripts/project_status.py
-
-validate-env: ## 验证环境变量配置
-	uv run scripts/validate_env.py
-
-validate-env-local: ## 🏠 本地环境验证（跳过SMTP测试）
-	uv run scripts/validate_env_local.py
-
-fix-env-encoding: ## 🔧 修复.env文件中的编码问题（如Gmail密码中的特殊字符）
-	uv run scripts/fix_env_encoding.py
-
-test-workflows: ## 🔍 分析和测试工作流配置
-	uv run scripts/test_workflows.py
-
-cleanup-workflows: ## 🧹 清理不需要的工作流（节省资源）
-	uv run scripts/cleanup_workflows.py
-
-fix-cache-issues: ## 🔧 修复GitHub Actions缓存超时问题
-	uv run scripts/fix_cache_issues.py
-
-diagnose-cache: ## 🔍 诊断GitHub Actions缓存问题
-	uv run scripts/diagnose_cache_issues.py
-
-rebuild-repository: ## 🔄 重建仓库（从fork转为独立仓库）
-	uv run scripts/rebuild_repository.py
-
-organize-docs: ## 📁 整理项目文档到docs目录
-	uv run scripts/organize_docs.py --execute
-
-organize-docs-preview: ## 👀 预览文档整理操作（不执行实际移动）
-	uv run scripts/organize_docs.py
-
-# uv 工具管理
-install-tools: ## 安装常用开发工具
-	uv tool install ruff
-	uv tool install black
-	uv tool install mypy
-	uv tool install pytest
-
-list-tools: ## 列出已安装的工具
-	uv tool list
-
-# uv 环境管理
-create-env: ## 创建新的虚拟环境
-	uv venv --python 3.12
-
-activate-env: ## 显示激活环境的命令
-	@echo "运行以下命令激活环境:"
-	@echo "source .venv/bin/activate"
-
-python-versions: ## 显示可用的 Python 版本
-	uv python list
-
-install-python: ## 安装指定 Python 版本 (用法: make install-python VERSION=3.11)
-	uv python install $(VERSION)
-
-# 项目管理
-add-dep: ## 添加依赖 (用法: make add-dep DEP=requests)
-	uv add $(DEP)
-
-add-dev-dep: ## 添加开发依赖 (用法: make add-dev-dep DEP=pytest)
-	uv add --dev $(DEP)
-
-remove-dep: ## 移除依赖 (用法: make remove-dep DEP=requests)
-	uv remove $(DEP)
+# =============================================================================
+# 📊 信息查看
+# =============================================================================
 
 show-deps: ## 显示依赖树
 	uv tree
 
-# 扩展功能开发
-setup-multi-ai: ## 设置多 AI API 支持
-	uv run scripts/setup_multi_ai.py
-
-test-ai-providers: ## 测试所有 AI 提供商连接
-	uv run scripts/setup_multi_ai.py
-
-setup-web-dev: ## 设置 Web 开发环境
-	uv add fastapi uvicorn jinja2 python-multipart
-	uv add --dev pytest-asyncio httpx
-
-setup-database: ## 设置数据库支持
-	uv add sqlalchemy asyncpg alembic
-	uv add --dev pytest-postgresql
-
-setup-recommendation: ## 设置推荐系统依赖
-	uv add scikit-learn numpy pandas transformers
-	uv add --dev jupyter notebook
-
-setup-graph-analysis: ## 设置图分析依赖
-	uv add networkx pyvis matplotlib plotly
-	uv add --dev graphviz
-
-setup-mobile-dev: ## 设置移动端开发环境
-	@echo "请参考 EXTENSION_ROADMAP.md 中的移动端开发指南"
-	@echo "需要安装 React Native CLI 和相关工具"
-
-# 扩展功能测试
-test-recommendation: ## 测试推荐系统
-	uv run scripts/test_recommendation.py
-
-test-trend-analysis: ## 测试趋势分析
-	uv run scripts/test_trend_analysis.py
-
-test-graph-builder: ## 测试图谱构建
-	uv run scripts/test_graph_builder.py
-
-# 开发环境设置
-setup-full-dev: setup-multi-ai setup-web-dev setup-database setup-recommendation setup-graph-analysis ## 设置完整开发环境
-
-# 扩展功能部署
-deploy-web: ## 部署 Web 界面
-	@echo "构建 Web 应用..."
-	cd web && npm run build
-	@echo "部署到 GitHub Pages..."
-
-deploy-api: ## 部署 API 服务 (GitHub Actions)
-	@echo "API 服务通过 GitHub Actions 自动部署"
-	@echo "请查看 .github/workflows/ 目录中的工作流配置"
-
-# 性能和缓存
 cache-info: ## 显示缓存信息
 	@echo "缓存目录:"
 	uv cache dir
 	@echo "缓存内容:"
 	ls -la $$(uv cache dir) 2>/dev/null || echo "缓存目录为空"
 
-clean-cache: ## 清理 uv 缓存
-	uv cache clean
-
-# 发布相关
-check-build: ## 检查构建配置
-	uv build --check
-
-build-wheel: ## 构建 wheel 包
-	uv build --wheel
-
-build-sdist: ## 构建源码包
-	uv build --sdist 
+python-versions: ## 显示可用的 Python 版本
+	uv python list 

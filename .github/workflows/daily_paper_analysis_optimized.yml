@@ -85,6 +85,9 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         
+        # 🎛️ 高级配置：用户指定AI模型 (可选)
+        PREFERRED_AI_MODEL: ${{ secrets.PREFERRED_AI_MODEL }}
+        
         # 📧 邮件配置
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -98,10 +101,6 @@ jobs:
         SEARCH_DAYS: ${{ secrets.SEARCH_DAYS || '2' }}
         ANALYSIS_TYPE: ${{ secrets.ANALYSIS_TYPE || 'comprehensive' }}
         GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
-        
-        # 📊 论文质量筛选配置
-        ENABLE_QUALITY_FILTER: ${{ secrets.ENABLE_QUALITY_FILTER || 'true' }}
-        QUALITY_THRESHOLD: ${{ secrets.QUALITY_THRESHOLD || '65.0' }}
         
         # ⚡ 并行处理配置
         ENABLE_PARALLEL: true
