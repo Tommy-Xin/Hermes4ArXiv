@@ -99,6 +99,10 @@ jobs:
         ANALYSIS_TYPE: ${{ secrets.ANALYSIS_TYPE || 'comprehensive' }}
         GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         
+        # 📊 论文质量筛选配置
+        ENABLE_QUALITY_FILTER: ${{ secrets.ENABLE_QUALITY_FILTER || 'true' }}
+        QUALITY_THRESHOLD: ${{ secrets.QUALITY_THRESHOLD || '65.0' }}
+        
         # ⚡ 并行处理配置
         ENABLE_PARALLEL: true
         MAX_WORKERS: 0  # 自动计算最优线程数

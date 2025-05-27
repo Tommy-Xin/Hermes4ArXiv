@@ -68,6 +68,10 @@ class Config:
         self.CATEGORIES = [cat.strip() for cat in categories_str.split(",") if cat.strip()]
         self.MAX_PAPERS = int(os.getenv("MAX_PAPERS", "50"))
         self.SEARCH_DAYS = int(os.getenv("SEARCH_DAYS", "2"))
+        
+        # 📊 论文质量筛选配置
+        self.ENABLE_QUALITY_FILTER = os.getenv("ENABLE_QUALITY_FILTER", "true").lower() == "true"
+        self.QUALITY_THRESHOLD = float(os.getenv("QUALITY_THRESHOLD", "65.0"))
 
         # AI分析配置
         self.AI_MODEL = "deepseek-chat"
