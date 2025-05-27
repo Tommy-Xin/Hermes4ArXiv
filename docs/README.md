@@ -14,6 +14,7 @@
 - `TESTING_GUIDE.md` - 测试指南
 - `PARALLEL_OPTIMIZATION_GUIDE.md` - 并行优化指南
 - `PARALLEL_OPTIMIZATION_SUMMARY.md` - 并行优化总结
+- `CACHE_ISSUES_GUIDE.md` - GitHub Actions缓存问题解决指南
 
 ### 🚀 extensions/ - 扩展功能
 - `EXTENSIONS_SUMMARY.md` - 扩展功能总结
@@ -34,6 +35,7 @@
 - **部署**: 查看 [部署指南](setup/DEPLOY_FOR_USERS.md)
 - **Gmail配置**: 参考 [Gmail设置](setup/GMAIL_SETUP_GUIDE.md)
 - **性能优化**: 阅读 [并行优化指南](development/PARALLEL_OPTIMIZATION_GUIDE.md)
+- **缓存问题**: 解决 [GitHub Actions缓存问题](development/CACHE_ISSUES_GUIDE.md)
 - **扩展功能**: 探索 [扩展路线图](extensions/EXTENSION_ROADMAP.md)
 
 ## 📝 文档维护

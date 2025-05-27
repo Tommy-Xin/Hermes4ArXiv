@@ -106,6 +106,7 @@ make quick-start
 - [📧 Gmail 配置指南](docs/setup/GMAIL_SETUP_GUIDE.md) - Gmail 专用配置（推荐）
 - [🧪 完整测试指南](docs/development/TESTING_GUIDE.md) - 本地和 GitHub Actions 测试
 - [⚡ 并行优化指南](docs/development/PARALLEL_OPTIMIZATION_GUIDE.md) - 性能优化和成本节省
+- [🔧 缓存问题指南](docs/development/CACHE_ISSUES_GUIDE.md) - GitHub Actions 缓存超时解决方案
 - [🔐 安全说明](docs/setup/SECURITY.md) - 安全保障说明
 
 ### 方式二: 本地开发

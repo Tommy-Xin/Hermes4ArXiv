@@ -117,6 +117,15 @@ test-workflows: ## 🔍 分析和测试工作流配置
 cleanup-workflows: ## 🧹 清理不需要的工作流（节省资源）
 	uv run scripts/cleanup_workflows.py
 
+fix-cache-issues: ## 🔧 修复GitHub Actions缓存超时问题
+	uv run scripts/fix_cache_issues.py
+
+diagnose-cache: ## 🔍 诊断GitHub Actions缓存问题
+	uv run scripts/diagnose_cache_issues.py
+
+rebuild-repository: ## 🔄 重建仓库（从fork转为独立仓库）
+	uv run scripts/rebuild_repository.py
+
 organize-docs: ## 📁 整理项目文档到docs目录
 	uv run scripts/organize_docs.py --execute
 
