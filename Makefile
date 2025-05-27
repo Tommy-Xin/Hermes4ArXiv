@@ -87,8 +87,14 @@ update-deps: ## 更新依赖
 run-script: ## 运行独立脚本 (用法: make run-script SCRIPT=scripts/analyze_papers.py ARGS="--max-papers 3")
 	uv run $(SCRIPT) $(ARGS)
 
-benchmark: ## 运行性能基准测试
-	uv run scripts/benchmark.py
+benchmark: ## 运行并行分析性能基准测试
+	uv run scripts/benchmark_parallel.py
+
+benchmark-quick: ## 快速性能测试（3篇论文）
+	uv run scripts/benchmark_parallel.py --quick
+
+benchmark-full: ## 完整性能测试（20篇论文）
+	uv run scripts/benchmark_parallel.py --papers 20
 
 quick-analysis: ## 快速论文分析（不使用AI）
 	uv run scripts/analyze_papers.py --max-papers 5 --search-days 3
@@ -110,6 +116,12 @@ test-workflows: ## 🔍 分析和测试工作流配置
 
 cleanup-workflows: ## 🧹 清理不需要的工作流（节省资源）
 	uv run scripts/cleanup_workflows.py
+
+organize-docs: ## 📁 整理项目文档到docs目录
+	uv run scripts/organize_docs.py --execute
+
+organize-docs-preview: ## 👀 预览文档整理操作（不执行实际移动）
+	uv run scripts/organize_docs.py
 
 # uv 工具管理
 install-tools: ## 安装常用开发工具

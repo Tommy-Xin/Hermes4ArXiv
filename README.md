@@ -2,7 +2,7 @@
 
 一个基于 GitHub Actions 的自动化工具，每天自动追踪和分析 arXiv 最新论文，并通过邮件发送美化的分析报告。该工具采用模块化架构，支持多种AI API和美化的输出格式。
 
-> 🚀 **新用户？** 查看 [快速开始总结](QUICK_START_SUMMARY.md) 了解 5 分钟配置流程！
+> 🚀 **新用户？** 查看 [快速开始总结](docs/setup/QUICK_START_SUMMARY.md) 了解 5 分钟配置流程！
 
 ## ✨ 新功能特点
 
@@ -25,6 +25,12 @@
 - **多AI支持**: 预留OpenAI、Claude等API接口
 - **错误重试**: 智能重试机制，提高成功率
 - **分析质量**: 5个维度的深度分析
+
+### ⚡ 并行处理优化
+- **多线程分析**: 并行处理论文分析，显著缩短运行时间
+- **智能负载均衡**: 自动计算最优工作线程数
+- **成本优化**: 减少GitHub Actions运行时间，节省计费费用
+- **性能监控**: 详细的性能统计和优化建议
 
 ### 🔧 改进的可靠性
 - **配置验证**: 启动时验证所有必要配置
@@ -96,10 +102,11 @@ make quick-start
 3. **运行设置向导**: Actions → 🚀 一键设置 ArXiv 论文追踪器
 
 **📋 配置指南**：
-- [📖 用户部署指南](DEPLOY_FOR_USERS.md) - 完整部署流程
-- [📧 Gmail 配置指南](GMAIL_SETUP_GUIDE.md) - Gmail 专用配置（推荐）
-- [🧪 完整测试指南](TESTING_GUIDE.md) - 本地和 GitHub Actions 测试
-- [🔐 安全说明](SECURITY.md) - 安全保障说明
+- [📖 用户部署指南](docs/setup/DEPLOY_FOR_USERS.md) - 完整部署流程
+- [📧 Gmail 配置指南](docs/setup/GMAIL_SETUP_GUIDE.md) - Gmail 专用配置（推荐）
+- [🧪 完整测试指南](docs/development/TESTING_GUIDE.md) - 本地和 GitHub Actions 测试
+- [⚡ 并行优化指南](docs/development/PARALLEL_OPTIMIZATION_GUIDE.md) - 性能优化和成本节省
+- [🔐 安全说明](docs/setup/SECURITY.md) - 安全保障说明
 
 ### 方式二: 本地开发
 
@@ -203,6 +210,11 @@ cd src && uv run python main.py
 
 # 运行测试
 uv run pytest tests/ -v
+
+# 性能基准测试
+make benchmark-quick    # 快速测试
+make benchmark         # 标准测试
+make benchmark-full    # 完整测试
 
 # 代码格式化
 uv run black src tests

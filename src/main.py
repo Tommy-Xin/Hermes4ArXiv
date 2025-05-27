@@ -16,6 +16,7 @@ from arxiv_client import ArxivClient
 from config import Config
 from email_sender import EmailSender
 from output_formatter import OutputFormatter
+from parallel_analyzer import ParallelPaperAnalyzer
 from utils.logger import logger
 
 
@@ -85,30 +86,61 @@ class ArxivPaperTracker:
 
             logger.info(f"找到 {len(papers)} 篇论文，开始分析")
 
-            # 2. 分析论文
-            papers_analyses = []
-
-            for i, paper in enumerate(papers, 1):
-                logger.info(f"正在处理论文 {i}/{len(papers)}: {paper.title}")
-
-                try:
-                    # 下载论文（如果需要）
-                    pdf_path = self.arxiv_client.download_paper(
-                        paper, self.config.PAPERS_DIR
+            # 2. 分析论文（支持并行和串行两种模式）
+            if self.config.ENABLE_PARALLEL and len(papers) > 1:
+                # 并行分析模式
+                logger.info("使用并行分析模式")
+                
+                # 计算最优工作线程数
+                if self.config.MAX_WORKERS > 0:
+                    optimal_workers = self.config.MAX_WORKERS
+                else:
+                    optimal_workers = ParallelPaperAnalyzer.calculate_optimal_workers(
+                        len(papers), self.config.API_DELAY
                     )
+                
+                # 创建并行分析器
+                parallel_analyzer = ParallelPaperAnalyzer(
+                    ai_analyzer=self.ai_analyzer,
+                    arxiv_client=self.arxiv_client,
+                    papers_dir=self.config.PAPERS_DIR,
+                    max_workers=optimal_workers,
+                    batch_size=min(len(papers), self.config.BATCH_SIZE)
+                )
+                
+                # 执行并行分析
+                papers_analyses = parallel_analyzer.analyze_papers_parallel(papers)
+                
+                # 记录性能统计
+                stats = parallel_analyzer.get_performance_stats()
+                logger.info(f"并行分析统计: {stats}")
+                
+            else:
+                # 串行分析模式（原有逻辑）
+                logger.info("使用串行分析模式")
+                papers_analyses = []
 
-                    # 分析论文
-                    analysis = self.ai_analyzer.analyze_paper(paper)
-                    papers_analyses.append((paper, analysis))
+                for i, paper in enumerate(papers, 1):
+                    logger.info(f"正在处理论文 {i}/{len(papers)}: {paper.title}")
 
-                    # 清理PDF文件
-                    if pdf_path:
-                        self.arxiv_client.delete_pdf(pdf_path)
+                    try:
+                        # 下载论文（如果需要）
+                        pdf_path = self.arxiv_client.download_paper(
+                            paper, self.config.PAPERS_DIR
+                        )
 
-                except Exception as e:
-                    logger.error(f"处理论文失败 {paper.title}: {e}")
-                    # 继续处理下一篇论文
-                    continue
+                        # 分析论文
+                        analysis = self.ai_analyzer.analyze_paper(paper)
+                        papers_analyses.append((paper, analysis))
+
+                        # 清理PDF文件
+                        if pdf_path:
+                            self.arxiv_client.delete_pdf(pdf_path)
+
+                    except Exception as e:
+                        logger.error(f"处理论文失败 {paper.title}: {e}")
+                        # 继续处理下一篇论文
+                        continue
 
             if not papers_analyses:
                 logger.warning("没有成功分析任何论文")

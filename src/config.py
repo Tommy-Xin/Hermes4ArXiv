@@ -58,6 +58,16 @@ class Config:
         self.API_RETRY_TIMES = 3  # API重试次数
         self.API_DELAY = 2  # API调用间隔（秒）
 
+        # 并行处理配置
+        self.ENABLE_PARALLEL = os.getenv("ENABLE_PARALLEL", "true").lower() == "true"
+        self.MAX_WORKERS = int(os.getenv("MAX_WORKERS", "0"))  # 0表示自动计算
+        self.BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
+
+        # 并行处理配置
+        self.ENABLE_PARALLEL = os.getenv("ENABLE_PARALLEL", "true").lower() == "true"
+        self.MAX_WORKERS = int(os.getenv("MAX_WORKERS", "0"))  # 0表示自动计算
+        self.BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
+
         # 输出配置
         self.OUTPUT_FORMAT = "markdown"  # 输出格式：markdown, html
         self.EMAIL_FORMAT = "html"  # 邮件格式：html, text
