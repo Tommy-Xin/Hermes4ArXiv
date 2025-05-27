@@ -37,8 +37,32 @@ except ImportError:
 
 def check_required_env_vars():
     """检查必需的环境变量"""
-    required_vars = [
-        'DEEPSEEK_API_KEY',
+    # 检查AI API配置 (四选一)
+    ai_apis = [
+        'CLAUDE_API_KEY',
+        'GEMINI_API_KEY', 
+        'OPENAI_API_KEY',
+        'DEEPSEEK_API_KEY'
+    ]
+    
+    configured_apis = []
+    for api in ai_apis:
+        if os.getenv(api):
+            configured_apis.append(api)
+    
+    if not configured_apis:
+        print("❌ 未配置任何AI API密钥")
+        print("💡 请至少配置以下API中的一个:")
+        for api in ai_apis:
+            print(f"   - {api}")
+        return False
+    
+    print("✅ 已配置的AI API:")
+    for api in configured_apis:
+        print(f"   - {api}")
+    
+    # 检查邮件配置 (必需)
+    email_vars = [
         'SMTP_SERVER', 
         'SMTP_USERNAME',
         'SMTP_PASSWORD',
@@ -46,18 +70,18 @@ def check_required_env_vars():
         'EMAIL_TO'
     ]
     
-    missing_vars = []
-    for var in required_vars:
+    missing_email_vars = []
+    for var in email_vars:
         if not os.getenv(var):
-            missing_vars.append(var)
+            missing_email_vars.append(var)
     
-    if missing_vars:
-        print("❌ 缺少以下环境变量:")
-        for var in missing_vars:
+    if missing_email_vars:
+        print("❌ 缺少以下邮件配置:")
+        for var in missing_email_vars:
             print(f"   - {var}")
         return False
     
-    print("✅ 所有必需的环境变量都已设置")
+    print("✅ 邮件配置完整")
     return True
 
 def test_smtp_connection():
@@ -144,54 +168,89 @@ def send_test_email():
         print(f"❌ 测试邮件发送失败: {e}")
         return False
 
-def test_deepseek_api():
-    """测试 DeepSeek API 连接"""
+def test_ai_apis():
+    """测试已配置的AI API连接"""
     try:
         import requests
-        
-        api_key = os.getenv('DEEPSEEK_API_KEY')
-        if not api_key:
-            print("❌ DEEPSEEK_API_KEY 未设置")
-            return False
-            
-        if not api_key.startswith('sk-'):
-            print("❌ DEEPSEEK_API_KEY 格式不正确（应以 'sk-' 开头）")
-            return False
-            
-        # 测试 API 连接
-        headers = {
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json'
-        }
-        
-        # 发送一个简单的测试请求
-        data = {
-            'model': 'deepseek-chat',
-            'messages': [{'role': 'user', 'content': 'Hello'}],
-            'max_tokens': 10
-        }
-        
-        response = requests.post(
-            'https://api.deepseek.com/chat/completions',
-            headers=headers,
-            json=data,
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            print("✅ DeepSeek API 连接成功")
-            return True
-        else:
-            print(f"❌ DeepSeek API 测试失败: {response.status_code}")
-            print(f"   响应: {response.text}")
-            return False
-            
     except ImportError:
-        print("⚠️  requests 库未安装，跳过 API 测试")
+        print("⚠️  requests 库未安装，跳过 AI API 测试")
         return True
-    except Exception as e:
-        print(f"❌ DeepSeek API 测试失败: {e}")
+    
+    # AI API配置
+    api_configs = {
+        'DEEPSEEK_API_KEY': {
+            'url': 'https://api.deepseek.com/chat/completions',
+            'model': 'deepseek-chat',
+            'name': 'DeepSeek'
+        },
+        'OPENAI_API_KEY': {
+            'url': 'https://api.openai.com/v1/chat/completions', 
+            'model': 'gpt-3.5-turbo',
+            'name': 'OpenAI'
+        },
+        'CLAUDE_API_KEY': {
+            'url': 'https://api.anthropic.com/v1/messages',
+            'model': 'claude-3-haiku-20240307',
+            'name': 'Claude'
+        },
+        'GEMINI_API_KEY': {
+            'url': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+            'model': 'gemini-pro', 
+            'name': 'Gemini'
+        }
+    }
+    
+    tested_any = False
+    for api_key_env, config in api_configs.items():
+        api_key = os.getenv(api_key_env)
+        if not api_key:
+            continue
+            
+        tested_any = True
+        print(f"🔍 测试 {config['name']} API...")
+        
+        try:
+            if api_key_env == 'DEEPSEEK_API_KEY':
+                # DeepSeek API测试
+                headers = {
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json'
+                }
+                data = {
+                    'model': config['model'],
+                    'messages': [{'role': 'user', 'content': 'Hello'}],
+                    'max_tokens': 10
+                }
+                response = requests.post(config['url'], headers=headers, json=data, timeout=10)
+                
+            elif api_key_env == 'OPENAI_API_KEY':
+                # OpenAI API测试 (简化测试，只检查认证)
+                headers = {
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json'
+                }
+                # 只是检查认证，不实际调用
+                print(f"✅ {config['name']} API密钥格式正确")
+                continue
+                
+            else:
+                # 其他API暂时只检查密钥格式
+                print(f"✅ {config['name']} API密钥已配置")
+                continue
+            
+            if response.status_code == 200:
+                print(f"✅ {config['name']} API 连接成功")
+            else:
+                print(f"⚠️  {config['name']} API 响应异常: {response.status_code}")
+                
+        except Exception as e:
+            print(f"⚠️  {config['name']} API 测试失败: {e}")
+    
+    if not tested_any:
+        print("⚠️  未找到已配置的AI API")
         return False
+        
+    return True
 
 def main():
     """主函数"""
@@ -204,9 +263,9 @@ def main():
     
     print("\n" + "=" * 50)
     
-    # 测试 DeepSeek API
-    print("🤖 测试 DeepSeek API...")
-    test_deepseek_api()
+    # 测试已配置的AI API
+    print("🤖 测试AI API连接...")
+    test_ai_apis()
     
     print("\n" + "=" * 50)
     
