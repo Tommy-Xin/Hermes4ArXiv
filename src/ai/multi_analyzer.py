@@ -139,11 +139,19 @@ class DeepSeekAnalyzer(BaseAIAnalyzer):
         """分析论文"""
         import openai
         
-        # 配置OpenAI客户端（DeepSeek兼容OpenAI API）
-        client = openai.OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
-        )
+        # 兼容不同版本的OpenAI库
+        try:
+            # 新版本 OpenAI (>=1.0.0)
+            client = openai.OpenAI(
+                api_key=self.api_key,
+                base_url=self.base_url
+            )
+            use_new_api = True
+        except AttributeError:
+            # 老版本 OpenAI (<1.0.0)
+            openai.api_key = self.api_key
+            openai.api_base = self.base_url
+            use_new_api = False
         
         system_prompt = PromptManager.get_system_prompt(analysis_type)
         user_prompt = PromptManager.get_user_prompt(paper, analysis_type)
@@ -152,18 +160,32 @@ class DeepSeekAnalyzer(BaseAIAnalyzer):
             try:
                 logger.info(f"DeepSeek分析论文: {paper.title[:50]}... (尝试 {attempt + 1}/{self.retry_times})")
                 
-                response = client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0.7,
-                    max_tokens=1500,
-                    timeout=self.timeout
-                )
-                
-                analysis = response.choices[0].message.content
+                if use_new_api:
+                    # 新版本API
+                    response = client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.7,
+                        max_tokens=1500,
+                        timeout=self.timeout
+                    )
+                    analysis = response.choices[0].message.content
+                else:
+                    # 老版本API
+                    response = openai.ChatCompletion.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.7,
+                        max_tokens=1500,
+                        request_timeout=self.timeout
+                    )
+                    analysis = response.choices[0].message.content
                 logger.info(f"DeepSeek分析完成: {paper.title[:50]}...")
                 
                 # 添加延迟避免API限制
@@ -198,7 +220,15 @@ class OpenAIAnalyzer(BaseAIAnalyzer):
         """分析论文"""
         import openai
         
-        client = openai.OpenAI(api_key=self.api_key)
+        # 兼容不同版本的OpenAI库
+        try:
+            # 新版本 OpenAI (>=1.0.0)
+            client = openai.OpenAI(api_key=self.api_key)
+            use_new_api = True
+        except AttributeError:
+            # 老版本 OpenAI (<1.0.0)
+            openai.api_key = self.api_key
+            use_new_api = False
         
         system_prompt = PromptManager.get_system_prompt(analysis_type)
         user_prompt = PromptManager.get_user_prompt(paper, analysis_type)
@@ -207,18 +237,32 @@ class OpenAIAnalyzer(BaseAIAnalyzer):
             try:
                 logger.info(f"OpenAI分析论文: {paper.title[:50]}... (尝试 {attempt + 1}/{self.retry_times})")
                 
-                response = client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0.7,
-                    max_tokens=1500,
-                    timeout=self.timeout
-                )
-                
-                analysis = response.choices[0].message.content
+                if use_new_api:
+                    # 新版本API
+                    response = client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.7,
+                        max_tokens=1500,
+                        timeout=self.timeout
+                    )
+                    analysis = response.choices[0].message.content
+                else:
+                    # 老版本API
+                    response = openai.ChatCompletion.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.7,
+                        max_tokens=1500,
+                        request_timeout=self.timeout
+                    )
+                    analysis = response.choices[0].message.content
                 logger.info(f"OpenAI分析完成: {paper.title[:50]}...")
                 
                 await asyncio.sleep(self.delay)
