@@ -19,18 +19,41 @@ jobs:
     steps:
     - name: 📋 检查配置状态
       run: |
-        echo "🔍 检查必需的 Secrets 配置状态..."
+        echo "🔍 检查 SOTA AI模型和邮件配置状态..."
         echo ""
         
-        # 检查必需的 Secrets
-        secrets_status=""
+        # 检查SOTA AI模型配置 (至少需要一个)
+        ai_configured=false
         
-        if [ -z "${{ secrets.DEEPSEEK_API_KEY }}" ]; then
-          echo "❌ DEEPSEEK_API_KEY: 未配置"
+        if [ -n "${{ secrets.CLAUDE_API_KEY }}" ]; then
+          echo "✅ CLAUDE_API_KEY: 已配置 (🏆 Claude Opus 4 - 世界最强推理模型)"
+          ai_configured=true
+        fi
+        
+        if [ -n "${{ secrets.GEMINI_API_KEY }}" ]; then
+          echo "✅ GEMINI_API_KEY: 已配置 (🔬 Gemini 2.5 Pro Preview - Google最新SOTA)"
+          ai_configured=true
+        fi
+        
+        if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
+          echo "✅ OPENAI_API_KEY: 已配置 (🧠 OpenAI o3 - 推理能力王者)"
+          ai_configured=true
+        fi
+        
+        if [ -n "${{ secrets.DEEPSEEK_API_KEY }}" ]; then
+          echo "✅ DEEPSEEK_API_KEY: 已配置 (💰 DeepSeek R1 - 高性价比SOTA)"
+          ai_configured=true
+        fi
+        
+        if [ "$ai_configured" = false ]; then
+          echo "❌ 未配置任何AI API密钥"
           secrets_status="missing"
         else
-          echo "✅ DEEPSEEK_API_KEY: 已配置"
+          echo "🎯 AI模型配置完成，系统将自动选择最佳可用模型"
         fi
+        
+        # 检查必需的邮件配置
+        secrets_status=""
         
         if [ -z "${{ secrets.SMTP_SERVER }}" ]; then
           echo "❌ SMTP_SERVER: 未配置"
@@ -74,9 +97,13 @@ jobs:
           echo "📝 配置步骤："
           echo "1. 进入仓库 Settings → Secrets and variables → Actions"
           echo "2. 点击 'New repository secret'"
-          echo "3. 添加以下 Secrets："
-          echo "   - DEEPSEEK_API_KEY: 您的 DeepSeek API 密钥"
-          echo "   - SMTP_SERVER: 邮件服务器 (如: smtp.qq.com)"
+          echo "3. 添加 SOTA AI模型 API (只需配置一个)："
+          echo "   🏆 CLAUDE_API_KEY: Claude Opus 4 API密钥 (推荐)"
+          echo "   🔬 GEMINI_API_KEY: Gemini 2.5 Pro Preview API密钥"
+          echo "   🧠 OPENAI_API_KEY: OpenAI o3 API密钥"
+          echo "   💰 DEEPSEEK_API_KEY: DeepSeek R1 API密钥 (经济型)"
+          echo "4. 添加邮件配置："
+          echo "   - SMTP_SERVER: 邮件服务器 (如: smtp.gmail.com)"
           echo "   - SMTP_USERNAME: 邮箱账号"
           echo "   - SMTP_PASSWORD: 邮箱授权码"
           echo "   - EMAIL_FROM: 发件人邮箱"
@@ -110,7 +137,12 @@ jobs:
     
     - name: 🔍 验证配置
       env:
+        # SOTA AI模型配置
+        CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        # 邮件配置
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
@@ -143,12 +175,18 @@ jobs:
     
     - name: 🧪 运行测试分析
       env:
+        # SOTA AI模型配置
+        CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        # 邮件配置
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        # 测试配置
         MAX_PAPERS: 3  # 测试时只分析3篇论文
         SEARCH_DAYS: 1
       run: |

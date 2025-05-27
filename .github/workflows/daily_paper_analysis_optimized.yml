@@ -78,14 +78,28 @@ jobs:
     - name: Run paper analysis with timeout
       timeout-minutes: 45  # 为主要任务设置独立超时
       env:
+        # 🤖 SOTA AI模型配置 (只需配置一个即可)
+        # 系统会自动选择您配置的API对应的模型
+        CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        
+        # 📧 邮件配置
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         SMTP_PORT: ${{ secrets.SMTP_PORT }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        # 并行处理配置
+        
+        # 🔧 可选配置
+        MAX_PAPERS: ${{ secrets.MAX_PAPERS || '10' }}  # SOTA模型建议减少数量控制成本
+        SEARCH_DAYS: ${{ secrets.SEARCH_DAYS || '2' }}
+        ANALYSIS_TYPE: ${{ secrets.ANALYSIS_TYPE || 'comprehensive' }}
+        GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        
+        # ⚡ 并行处理配置
         ENABLE_PARALLEL: true
         MAX_WORKERS: 0  # 自动计算最优线程数
         BATCH_SIZE: 20
