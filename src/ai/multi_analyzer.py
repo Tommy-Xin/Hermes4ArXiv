@@ -333,14 +333,14 @@ class MultiAIAnalyzer:
         if self.config.get('AI_FALLBACK_ORDER'):
             order_str = self.config.get('AI_FALLBACK_ORDER')
             user_order = []
-            for provider_name in order_str.split(','):
-                provider_name = provider_name.strip().lower()
-                try:
-                    provider = AIProvider(provider_name)
+        for provider_name in order_str.split(','):
+            provider_name = provider_name.strip().lower()
+            try:
+                provider = AIProvider(provider_name)
                     if provider in available_providers:
                         user_order.append(provider)
-                except ValueError:
-                    logger.warning(f"未知的AI提供商: {provider_name}")
+            except ValueError:
+                logger.warning(f"未知的AI提供商: {provider_name}")
             if user_order:
                 return user_order
         
