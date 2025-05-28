@@ -202,11 +202,11 @@ class PromptManager:
         authors_str = '未知'
         if hasattr(paper, 'authors') and paper.authors:
             try:
-                # 正常情况：直接使用 author.name
-        author_names = [author.name for author in paper.authors]
-        authors_str = ', '.join(author_names[:5])  # 最多显示5个作者
-        if len(author_names) > 5:
-            authors_str += f" 等{len(author_names)}人"
+            # 正常情况：直接使用 author.name
+            author_names = [author.name for author in paper.authors]
+            authors_str = ', '.join(author_names[:5])  # 最多显示5个作者
+            if len(author_names) > 5:
+                authors_str += f" 等{len(author_names)}人"
             except AttributeError as e:
                 # 异常情况：Author对象结构不正常
                 logger = logging.getLogger(__name__)
