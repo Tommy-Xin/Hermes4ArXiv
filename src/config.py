@@ -32,31 +32,18 @@ class Config:
 
     def __init__(self):
         """初始化配置，从环境变量读取"""
-        # AI API配置
+        # AI API配置 - 只使用DeepSeek（可靠稳定）
         self.DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
         self.DEEPSEEK_API_BASE = "https://api.deepseek.com/v1"
         self.DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
         
-        # 多AI支持
-        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-        self.OPENAI_MODEL = os.getenv("OPENAI_MODEL", "o3-2025-04-16")
-        
-        self.CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
-        self.CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-opus-4-20250514")
-        
-        self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-        self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro-preview-05-06")
-        
-        # AI分析配置（使用智能降级策略）
-        self.AI_FALLBACK_ORDER = os.getenv("AI_FALLBACK_ORDER", "deepseek,openai,claude,gemini")
+        # 分析配置
         self.ANALYSIS_TYPE = os.getenv("ANALYSIS_TYPE", "comprehensive")
         
-        # 🎯 用户指定使用的AI模型 (优先级最高)
-        self.PREFERRED_AI_MODEL = os.getenv("PREFERRED_AI_MODEL", "").lower().strip()  # deepseek, openai, claude, gemini
-        
-        # 失败检测和处理配置
-        self.MAX_CONSECUTIVE_FAILURES = self._safe_int(os.getenv("MAX_CONSECUTIVE_FAILURES"), "3")  # 最大连续失败次数
-        self.FAILURE_RESET_TIME = self._safe_int(os.getenv("FAILURE_RESET_TIME"), "300")  # 失败计数重置时间（秒）
+        # API调用配置
+        self.API_RETRY_TIMES = self._safe_int(os.getenv("API_RETRY_TIMES"), "3")  # API重试次数
+        self.API_DELAY = self._safe_int(os.getenv("API_DELAY"), "2")  # API调用间隔（秒）
+        self.API_TIMEOUT = self._safe_int(os.getenv("API_TIMEOUT"), "60")  # API超时时间（秒）
 
         # 邮件配置
         self.SMTP_SERVER = os.getenv("SMTP_SERVER")
@@ -82,8 +69,6 @@ class Config:
 
         # AI分析配置
         self.AI_MODEL = "deepseek-chat"
-        self.API_RETRY_TIMES = 3  # API重试次数
-        self.API_DELAY = 2  # API调用间隔（秒）
 
         # 并行处理配置
         self.ENABLE_PARALLEL = os.getenv("ENABLE_PARALLEL", "true").lower() == "true"
@@ -102,13 +87,10 @@ class Config:
         # 检查至少有一个AI API密钥
         ai_apis = [
             self.DEEPSEEK_API_KEY,
-            self.OPENAI_API_KEY,
-            self.CLAUDE_API_KEY,
-            self.GEMINI_API_KEY
         ]
         
         if not any(ai_apis):
-            print("❌ 至少需要配置一个AI API密钥：DEEPSEEK_API_KEY, OPENAI_API_KEY, CLAUDE_API_KEY, 或 GEMINI_API_KEY")
+            print("❌ 至少需要配置一个AI API密钥：DEEPSEEK_API_KEY")
             return False
         
         # 检查邮件配置
@@ -133,17 +115,8 @@ class Config:
         configured_ais = []
         if self.DEEPSEEK_API_KEY:
             configured_ais.append("DeepSeek")
-        if self.OPENAI_API_KEY:
-            configured_ais.append("OpenAI")
-        if self.CLAUDE_API_KEY:
-            configured_ais.append("Claude")
-        if self.GEMINI_API_KEY:
-            configured_ais.append("Gemini")
         
         print(f"✅ 配置验证通过！已配置的AI模型: {', '.join(configured_ais)}")
-        
-        if self.PREFERRED_AI_MODEL:
-            print(f"🎯 用户指定使用: {self.PREFERRED_AI_MODEL.upper()}")
 
         return True
 
