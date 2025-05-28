@@ -134,6 +134,8 @@ class DeepSeekAnalyzer(BaseAIAnalyzer):
     def __init__(self, api_key: str, model: str = "deepseek-chat", **kwargs):
         super().__init__(api_key, model, **kwargs)
         self.base_url = "https://api.deepseek.com/v1"
+        # 增加超时时间以应对网络延迟
+        self.timeout = kwargs.get('timeout', 60)  # 增加到60秒
     
     async def analyze_paper(self, paper: arxiv.Result, analysis_type: str = "comprehensive") -> Dict[str, Any]:
         """分析论文"""
@@ -144,7 +146,8 @@ class DeepSeekAnalyzer(BaseAIAnalyzer):
             # 新版本 OpenAI (>=1.0.0)
             client = openai.OpenAI(
                 api_key=self.api_key,
-                base_url=self.base_url
+                base_url=self.base_url,
+                timeout=self.timeout  # 设置全局超时
             )
             use_new_api = True
         except AttributeError:
@@ -194,10 +197,21 @@ class DeepSeekAnalyzer(BaseAIAnalyzer):
                 return self._format_analysis_result(analysis, "deepseek", self.model)
                 
             except Exception as e:
-                logger.warning(f"DeepSeek分析失败 (尝试 {attempt + 1}): {str(e)}")
-                if attempt < self.retry_times - 1:
-                    await asyncio.sleep(self.delay * (attempt + 1))
+                error_msg = str(e)
+                # 特别处理网络相关错误
+                if "timeout" in error_msg.lower() or "connection" in error_msg.lower():
+                    logger.warning(f"DeepSeek网络错误 (尝试 {attempt + 1}): {error_msg}")
+                    # 网络错误时增加等待时间
+                    if attempt < self.retry_times - 1:
+                        wait_time = self.delay * (attempt + 2) * 2  # 指数退避
+                        logger.info(f"网络错误，等待 {wait_time} 秒后重试...")
+                        await asyncio.sleep(wait_time)
                 else:
+                    logger.warning(f"DeepSeek分析失败 (尝试 {attempt + 1}): {error_msg}")
+                    if attempt < self.retry_times - 1:
+                        await asyncio.sleep(self.delay * (attempt + 1))
+                
+                if attempt == self.retry_times - 1:
                     raise e
     
     def get_provider_info(self) -> Dict[str, str]:
@@ -447,7 +461,8 @@ class MultiAIAnalyzer:
                 logger.warning(f"⚠️ 用户指定的模型 {preferred_model} 不支持，使用自动选择")
         
         # SOTA模型优先级顺序（2025年5月最新）
-        sota_priority = ['claude', 'gemini', 'openai', 'deepseek']
+        # Gemini 2.5 Pro Preview 作为第一优先级（最新SOTA）
+        sota_priority = ['gemini', 'claude', 'openai', 'deepseek']
         
         # 检查用户配置的API密钥，按SOTA优先级排序
         available_providers = []
@@ -472,41 +487,61 @@ class MultiAIAnalyzer:
                 except ValueError:
                     logger.warning(f"未知的AI提供商: {provider_name}")
             if user_order:
+                logger.info(f"🔄 使用用户指定的回退顺序: {[p.value for p in user_order]}")
                 return user_order
         
+        # 确保DeepSeek始终可用作为保底（即使没有配置其他AI）
+        if not available_providers and self.config.get('DEEPSEEK_API_KEY'):
+            available_providers = [AIProvider.DEEPSEEK]
+            logger.info("🛡️ 只配置了DeepSeek，作为唯一可用AI")
+        
         # 返回可用的提供商（按SOTA优先级）
-        return available_providers if available_providers else [AIProvider.DEEPSEEK]
+        if available_providers:
+            logger.info(f"🎯 SOTA优先级回退顺序: {[p.value for p in available_providers]}")
+            return available_providers
+        else:
+            logger.warning("⚠️ 没有配置任何可用的AI，系统将无法工作")
+            return []
     
     def _initialize_analyzers(self):
         """初始化分析器"""
-        # DeepSeek
+        # DeepSeek - 稳定可靠的保底方案
         if self.config.get('DEEPSEEK_API_KEY'):
             self.analyzers[AIProvider.DEEPSEEK] = DeepSeekAnalyzer(
                 api_key=self.config['DEEPSEEK_API_KEY'],
                 model=self.config.get('DEEPSEEK_MODEL', 'deepseek-chat'),
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
-                delay=self.config.get('API_DELAY', 2)
+                delay=self.config.get('API_DELAY', 2),
+                timeout=60  # 增强网络容错性
             )
         
-        # OpenAI - 默认使用o3（2025年SOTA推理模型）
+        # OpenAI - 使用最新发布的o4系列和o3系列模型
         if self.config.get('OPENAI_API_KEY'):
+            # 优先使用最新的o4-mini（2025年4月16日发布）或o3（2025年4月16日发布）
+            openai_model = self.config.get('OPENAI_MODEL', 'o3')  # o4-mini是最新的推理模型
+            # 备选模型：o4-mini, o3-mini, o1-preview, gpt-4-turbo
+            
             self.analyzers[AIProvider.OPENAI] = OpenAIAnalyzer(
                 api_key=self.config['OPENAI_API_KEY'],
-                model=self.config.get('OPENAI_MODEL', 'o3-2025-04-16'),
+                model=openai_model,
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
                 delay=self.config.get('API_DELAY', 2)
             )
         
-        # Claude - 默认使用Claude Opus 4（2025年最强模型）
+        # Claude - 使用最新发布的Claude 4系列（2025年5月22日发布）
         if self.config.get('CLAUDE_API_KEY'):
+            # Claude 4 Opus是目前最强的模型，Claude 4 Sonnet平衡性能和效率
+            claude_model = self.config.get('CLAUDE_MODEL', 'claude-4-opus-20250514')
+            # 备选模型：claude-4-sonnet-20250514, claude-3-5-sonnet-20241022
+            
             self.analyzers[AIProvider.CLAUDE] = ClaudeAnalyzer(
                 api_key=self.config['CLAUDE_API_KEY'],
-                model=self.config.get('CLAUDE_MODEL', 'claude-opus-4-20250514'),
+                model=claude_model,
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
                 delay=self.config.get('API_DELAY', 2)
             )
         
-        # Gemini - 默认使用Gemini 2.5 Pro Preview（2025年最新SOTA）
+        # Gemini - 最新SOTA模型，配备安全过滤器修复器
         if self.config.get('GEMINI_API_KEY'):
             self.analyzers[AIProvider.GEMINI] = GeminiAnalyzer(
                 api_key=self.config['GEMINI_API_KEY'],
@@ -516,6 +551,12 @@ class MultiAIAnalyzer:
             )
         
         logger.info(f"初始化了 {len(self.analyzers)} 个AI分析器: {list(self.analyzers.keys())}")
+        
+        # 确保DeepSeek可用的特别提醒
+        if AIProvider.DEEPSEEK in self.analyzers:
+            logger.info("🛡️ DeepSeek分析器已配置，可作为可靠的保底方案")
+        else:
+            logger.warning("⚠️ DeepSeek未配置，建议配置作为保底方案")
     
     def get_available_analyzers(self) -> List[AIProvider]:
         """获取可用的分析器列表（排除被禁用的）"""

@@ -15,7 +15,7 @@
 ## 🔥 核心特性
 
 ### 🤖 智能多AI降级分析系统
-- **SOTA模型支持**: Claude Opus 4、Gemini 2.5 Pro、OpenAI o3、DeepSeek R1
+- **SOTA模型支持**: Claude 4 Opus/Sonnet、OpenAI o4-mini/o3、Gemini 2.5 Pro Preview、DeepSeek R1
 - **智能失败检测**: 自动检测Gemini安全过滤器等问题
 - **自动降级切换**: 失败时自动切换到下一个可用AI
 - **配置灵活性**: 用户可配置降级顺序和失败阈值

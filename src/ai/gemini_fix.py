@@ -118,6 +118,47 @@ class GeminiAPIFixer:
     def _create_academic_prompt(self, paper, analysis_type: str = "comprehensive") -> str:
         """创建学术化提示，避免触发安全过滤器"""
         
+        # 提取作者名称 - 优先使用正常路径，异常时才使用备用逻辑
+        authors_str = '未知'
+        if hasattr(paper, 'authors') and paper.authors:
+            try:
+                # 正常情况：直接使用 author.name
+                author_names = [author.name for author in paper.authors]
+                authors_str = ', '.join(author_names)
+            except AttributeError as e:
+                # 异常情况：Author对象没有name属性（不应该发生）
+                logger.warning(f"⚠️ 检测到异常的Author对象结构: {e}")
+                try:
+                    # 备用方案：尝试str()转换
+                    author_names = [str(author) for author in paper.authors]
+                    authors_str = ', '.join(author_names)
+                    logger.info(f"✅ 使用str()转换成功获取作者信息")
+                except Exception as e2:
+                    # 最终备用方案
+                    logger.error(f"❌ 无法获取作者信息: {e2}")
+                    authors_str = f'作者信息异常 ({len(paper.authors)} 位作者)'
+        
+        # 提取发布时间 - 优先使用正常路径
+        published_str = '未知'
+        if hasattr(paper, 'published') and paper.published:
+            try:
+                published_str = paper.published.strftime('%Y-%m-%d')
+            except (AttributeError, ValueError) as e:
+                logger.warning(f"⚠️ 发布时间格式异常: {e}")
+                published_str = str(paper.published)
+        elif hasattr(paper, 'published'):
+            # published字段存在但为None（不应该发生）
+            logger.warning("⚠️ 检测到published字段为None")
+        
+        # 提取类别信息
+        categories_str = '未知'
+        if hasattr(paper, 'categories') and paper.categories:
+            try:
+                categories_str = ', '.join(paper.categories)
+            except (TypeError, AttributeError) as e:
+                logger.warning(f"⚠️ 类别信息异常: {e}")
+                categories_str = str(paper.categories)
+        
         # 基础学术分析提示
         base_prompt = f"""作为专业的学术研究分析师，请对以下arXiv论文进行客观、严谨的学术分析：
 
@@ -125,11 +166,11 @@ class GeminiAPIFixer:
 
 论文摘要：{paper.summary}
 
-作者：{', '.join(paper.authors) if hasattr(paper, 'authors') and paper.authors else '未知'}
+作者：{authors_str}
 
-发表时间：{paper.published.strftime('%Y-%m-%d') if hasattr(paper, 'published') else '未知'}
+发表时间：{published_str}
 
-分类：{', '.join(paper.categories) if hasattr(paper, 'categories') and paper.categories else '未知'}"""
+分类：{categories_str}"""
 
         if analysis_type == "comprehensive":
             analysis_prompt = """
