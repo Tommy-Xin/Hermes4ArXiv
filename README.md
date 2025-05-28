@@ -16,6 +16,7 @@
 
 ### 🤖 智能多AI降级分析系统
 - **SOTA模型支持**: Claude 4 Opus/Sonnet、OpenAI o4-mini/o3、Gemini 2.5 Pro Preview、DeepSeek R1
+- **🎯 用户自定义模型**: 支持精确指定每个AI提供商的模型选择
 - **智能失败检测**: 自动检测Gemini安全过滤器等问题
 - **自动降级切换**: 失败时自动切换到下一个可用AI
 - **配置灵活性**: 用户可配置降级顺序和失败阈值
@@ -60,6 +61,29 @@
 - 🔒 **安全可靠**: GitHub企业级基础设施
 - 🎨 **精美设计**: 古典神话风格的邮件模板
 - 🤖 **AI驱动**: 多AI智能降级，深度分析，不只是简单摘要
+- 🎯 **个性化配置**: 支持用户自定义AI模型选择
+
+## 🎯 用户自定义模型配置
+
+Hermes4ArXiv支持灵活的AI模型配置，让您精确控制使用哪些模型：
+
+### 快速配置示例
+
+```bash
+# 🏆 SOTA性能优先
+PREFERRED_CLAUDE_MODEL=claude-4-opus-20250514      # 世界最佳编程模型
+PREFERRED_OPENAI_MODEL=o4-mini                     # 最新推理模型
+PREFERRED_GEMINI_MODEL=gemini-2.5-pro-preview-05-06 # 最新SOTA
+
+# 💰 成本优化
+PREFERRED_AI_MODEL=deepseek  # 只使用DeepSeek（高性价比）
+
+# ⚡ 速度优先
+PREFERRED_CLAUDE_MODEL=claude-4-sonnet-20250514    # 平衡性能和速度
+AI_FALLBACK_ORDER=claude,gemini,deepseek
+```
+
+📖 **详细配置指南**: [用户自定义模型配置指南](docs/CUSTOM_MODELS_GUIDE.md)
 
 ## 🔐 隐私安全
 

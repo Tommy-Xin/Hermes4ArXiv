@@ -39,16 +39,19 @@ class Config:
         
         # 多AI支持
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-        self.OPENAI_MODEL = os.getenv("OPENAI_MODEL", "o3-2025-04-16")
+        self.OPENAI_MODEL = os.getenv("OPENAI_MODEL", "o3")
         
         self.CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
-        self.CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-opus-4-20250514")
+        self.CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-4-opus-20250514")
         
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
         self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro-preview-05-06")
         
+        # 🎯 用户自定义模型配置 - 支持各AI提供商的精确模型选择
+        self.CUSTOM_MODEL_CONFIG = self._parse_custom_models()
+        
         # AI分析配置（使用智能降级策略）
-        self.AI_FALLBACK_ORDER = os.getenv("AI_FALLBACK_ORDER", "deepseek,openai,claude,gemini")
+        self.AI_FALLBACK_ORDER = os.getenv("AI_FALLBACK_ORDER", "gemini,claude,openai,deepseek")  # SOTA优先
         self.ANALYSIS_TYPE = os.getenv("ANALYSIS_TYPE", "comprehensive")
         
         # 🎯 用户指定使用的AI模型 (优先级最高)
@@ -153,3 +156,104 @@ class Config:
         self.TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
         # 创建日志目录
         (self.BASE_DIR / "storage" / "logs").mkdir(parents=True, exist_ok=True)
+
+    def _parse_custom_models(self) -> dict:
+        """
+        解析用户自定义模型配置
+        
+        支持的环境变量格式：
+        CUSTOM_OPENAI_MODELS="o4-mini,o3,o3-mini,o1-preview,gpt-4-turbo"
+        CUSTOM_CLAUDE_MODELS="claude-4-opus-20250514,claude-4-sonnet-20250514,claude-3-5-sonnet-20241022"
+        CUSTOM_GEMINI_MODELS="gemini-2.5-pro-preview-05-06,gemini-2.0-flash-exp,gemini-1.5-pro"
+        CUSTOM_DEEPSEEK_MODELS="deepseek-chat,deepseek-coder"
+        
+        或者单个模型覆盖：
+        PREFERRED_OPENAI_MODEL="o4-mini"
+        PREFERRED_CLAUDE_MODEL="claude-4-opus-20250514"
+        
+        Returns:
+            dict: 包含各AI提供商可用模型列表的字典
+        """
+        config = {
+            'openai': {
+                'available_models': self._parse_model_list(
+                    os.getenv("CUSTOM_OPENAI_MODELS", ""), 
+                    ["o4-mini", "o3", "o3-mini", "o1-preview", "gpt-4-turbo", "gpt-4o"]
+                ),
+                'preferred_model': os.getenv("PREFERRED_OPENAI_MODEL", "").strip(),
+                'default_model': "o3"
+            },
+            'claude': {
+                'available_models': self._parse_model_list(
+                    os.getenv("CUSTOM_CLAUDE_MODELS", ""),
+                    ["claude-4-opus-20250514", "claude-4-sonnet-20250514", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"]
+                ),
+                'preferred_model': os.getenv("PREFERRED_CLAUDE_MODEL", "").strip(),
+                'default_model': "claude-4-opus-20250514"
+            },
+            'gemini': {
+                'available_models': self._parse_model_list(
+                    os.getenv("CUSTOM_GEMINI_MODELS", ""),
+                    ["gemini-2.5-pro-preview-05-06", "gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"]
+                ),
+                'preferred_model': os.getenv("PREFERRED_GEMINI_MODEL", "").strip(),
+                'default_model': "gemini-2.5-pro-preview-05-06"
+            },
+            'deepseek': {
+                'available_models': self._parse_model_list(
+                    os.getenv("CUSTOM_DEEPSEEK_MODELS", ""),
+                    ["deepseek-chat", "deepseek-coder", "deepseek-reasoner"]
+                ),
+                'preferred_model': os.getenv("PREFERRED_DEEPSEEK_MODEL", "").strip(),
+                'default_model': "deepseek-chat"
+            }
+        }
+        
+        return config
+    
+    def _parse_model_list(self, env_value: str, default_models: List[str]) -> List[str]:
+        """解析模型列表字符串"""
+        if env_value and env_value.strip():
+            return [model.strip() for model in env_value.split(",") if model.strip()]
+        return default_models
+    
+    def get_model_for_provider(self, provider: str) -> str:
+        """
+        获取指定AI提供商的模型
+        
+        优先级：
+        1. 用户指定的首选模型 (PREFERRED_XXX_MODEL)
+        2. 环境变量配置的模型 (XXX_MODEL)
+        3. 默认SOTA模型
+        
+        Args:
+            provider: AI提供商名称 (openai, claude, gemini, deepseek)
+            
+        Returns:
+            str: 模型名称
+        """
+        provider = provider.lower()
+        
+        if provider not in self.CUSTOM_MODEL_CONFIG:
+            return getattr(self, f"{provider.upper()}_MODEL", "")
+        
+        config = self.CUSTOM_MODEL_CONFIG[provider]
+        
+        # 1. 检查用户首选模型
+        if config['preferred_model']:
+            return config['preferred_model']
+        
+        # 2. 检查环境变量配置
+        env_model = getattr(self, f"{provider.upper()}_MODEL", "")
+        if env_model:
+            return env_model
+            
+        # 3. 返回默认模型
+        return config['default_model']
+    
+    def get_available_models_for_provider(self, provider: str) -> List[str]:
+        """获取指定AI提供商的可用模型列表"""
+        provider = provider.lower()
+        if provider in self.CUSTOM_MODEL_CONFIG:
+            return self.CUSTOM_MODEL_CONFIG[provider]['available_models']
+        return []

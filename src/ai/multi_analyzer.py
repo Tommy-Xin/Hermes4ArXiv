@@ -507,9 +507,14 @@ class MultiAIAnalyzer:
         """初始化分析器"""
         # DeepSeek - 稳定可靠的保底方案
         if self.config.get('DEEPSEEK_API_KEY'):
+            deepseek_model = self.config.get('DEEPSEEK_MODEL', 'deepseek-chat')
+            # 🎯 支持用户自定义模型
+            if hasattr(self.config, 'get_model_for_provider'):
+                deepseek_model = self.config.get_model_for_provider('deepseek')
+            
             self.analyzers[AIProvider.DEEPSEEK] = DeepSeekAnalyzer(
                 api_key=self.config['DEEPSEEK_API_KEY'],
-                model=self.config.get('DEEPSEEK_MODEL', 'deepseek-chat'),
+                model=deepseek_model,
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
                 delay=self.config.get('API_DELAY', 2),
                 timeout=60  # 增强网络容错性
@@ -517,9 +522,11 @@ class MultiAIAnalyzer:
         
         # OpenAI - 使用最新发布的o4系列和o3系列模型
         if self.config.get('OPENAI_API_KEY'):
-            # 优先使用最新的o4-mini（2025年4月16日发布）或o3（2025年4月16日发布）
-            openai_model = self.config.get('OPENAI_MODEL', 'o3')  # o4-mini是最新的推理模型
-            # 备选模型：o4-mini, o3-mini, o1-preview, gpt-4-turbo
+            # 🎯 支持用户自定义模型选择
+            if hasattr(self.config, 'get_model_for_provider'):
+                openai_model = self.config.get_model_for_provider('openai')
+            else:
+                openai_model = self.config.get('OPENAI_MODEL', 'o3')  # o3是已发布的强大推理模型
             
             self.analyzers[AIProvider.OPENAI] = OpenAIAnalyzer(
                 api_key=self.config['OPENAI_API_KEY'],
@@ -530,9 +537,11 @@ class MultiAIAnalyzer:
         
         # Claude - 使用最新发布的Claude 4系列（2025年5月22日发布）
         if self.config.get('CLAUDE_API_KEY'):
-            # Claude 4 Opus是目前最强的模型，Claude 4 Sonnet平衡性能和效率
-            claude_model = self.config.get('CLAUDE_MODEL', 'claude-4-opus-20250514')
-            # 备选模型：claude-4-sonnet-20250514, claude-3-5-sonnet-20241022
+            # 🎯 支持用户自定义模型选择
+            if hasattr(self.config, 'get_model_for_provider'):
+                claude_model = self.config.get_model_for_provider('claude')
+            else:
+                claude_model = self.config.get('CLAUDE_MODEL', 'claude-4-opus-20250514')
             
             self.analyzers[AIProvider.CLAUDE] = ClaudeAnalyzer(
                 api_key=self.config['CLAUDE_API_KEY'],
@@ -543,14 +552,24 @@ class MultiAIAnalyzer:
         
         # Gemini - 最新SOTA模型，配备安全过滤器修复器
         if self.config.get('GEMINI_API_KEY'):
+            # 🎯 支持用户自定义模型选择
+            if hasattr(self.config, 'get_model_for_provider'):
+                gemini_model = self.config.get_model_for_provider('gemini')
+            else:
+                gemini_model = self.config.get('GEMINI_MODEL', 'gemini-2.5-pro-preview-05-06')
+            
             self.analyzers[AIProvider.GEMINI] = GeminiAnalyzer(
                 api_key=self.config['GEMINI_API_KEY'],
-                model=self.config.get('GEMINI_MODEL', 'gemini-2.5-pro-preview-05-06'),
+                model=gemini_model,
                 retry_times=self.config.get('API_RETRY_TIMES', 3),
                 delay=self.config.get('API_DELAY', 2)
             )
         
         logger.info(f"初始化了 {len(self.analyzers)} 个AI分析器: {list(self.analyzers.keys())}")
+        
+        # 显示使用的模型配置
+        for provider, analyzer in self.analyzers.items():
+            logger.info(f"🤖 {provider.value}: {analyzer.model}")
         
         # 确保DeepSeek可用的特别提醒
         if AIProvider.DEEPSEEK in self.analyzers:
