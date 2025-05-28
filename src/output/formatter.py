@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Tuple
 import arxiv
 from jinja2 import Environment, FileSystemLoader, Template
 
-from utils.logger import logger
+from ..utils.logger import logger
 
 
 class OutputFormatter:
@@ -331,14 +331,33 @@ class OutputFormatter:
                     line-height: 1.6;
                 }}
                 .paper-link {{
-                    display: inline-block;
-                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
                     color: white;
-                    padding: 8px 16px;
-                    border-radius: 6px;
+                    padding: 12px 20px;
+                    border-radius: 8px;
                     text-decoration: none;
-                    margin-top: 15px;
                     font-size: 14px;
+                    font-weight: 600;
+                    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.25);
+                    transition: all 0.3s ease;
+                    border: none;
+                    cursor: pointer;
+                    margin-top: 15px;
+                    margin-right: 10px;
+                }}
+                .paper-link:hover {{
+                    background: linear-gradient(135deg, #0056b3 0%, #004494 100%);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 16px rgba(0, 123, 255, 0.35);
+                    text-decoration: none;
+                    color: white;
+                }}
+                .paper-link:active {{
+                    transform: translateY(0);
+                    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.25);
                 }}
             </style>
         </head>
@@ -374,7 +393,7 @@ class OutputFormatter:
                 <div class="analysis">{analysis_text.replace(chr(10), '<br>')}</div>
                 <div>
                     <a href="{paper.entry_id}" class="paper-link">🔗 查看原文</a>
-                    <a href="{pdf_url}" class="paper-link" style="margin-left: 10px;">📄 下载PDF</a>
+                    <a href="{pdf_url}" class="paper-link">📄 下载PDF</a>
                 </div>
             </div>
             """
