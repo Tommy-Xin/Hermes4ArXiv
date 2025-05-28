@@ -55,8 +55,6 @@ class ArxivPaperTracker:
                 search_days=self.config.SEARCH_DAYS,
             )
 
-            # AI分析器已在上面初始化
-
             # 初始化输出格式化器
             self.output_formatter = OutputFormatter(self.config.TEMPLATES_DIR, self.config.GITHUB_REPO_URL)
 
@@ -163,7 +161,7 @@ class ArxivPaperTracker:
                         if pdf_path:
                             self.arxiv_client.delete_pdf(pdf_path)
 
-    except Exception as e:
+                    except Exception as e:
                         logger.error(f"处理论文失败 {paper.title}: {e}")
                         failed_papers.append(paper)
                         # 继续处理下一篇论文
@@ -232,7 +230,7 @@ class ArxivPaperTracker:
             stats = self.output_formatter.create_summary_stats(papers_analyses)
             logger.info(f"生成统计信息: {stats}")
 
-    except Exception as e:
+        except Exception as e:
             logger.error(f"生成输出失败: {e}")
             raise
 
@@ -240,9 +238,9 @@ class ArxivPaperTracker:
         """发送邮件报告"""
         if not self.email_sender or not self.config.EMAIL_TO:
             logger.info("邮件配置不完整，跳过发送邮件")
-        return
+            return
 
-    try:
+        try:
             # 生成HTML邮件内容
             html_content = self.output_formatter.format_html_email(papers_analyses)
 
@@ -271,7 +269,7 @@ class ArxivPaperTracker:
         try:
             test_papers = self.arxiv_client.get_recent_papers()
             logger.info(f"ArXiv连接测试成功，找到 {len(test_papers)} 篇论文")
-    except Exception as e:
+        except Exception as e:
             logger.error(f"ArXiv连接测试失败: {e}")
 
         logger.info("组件测试完成")
