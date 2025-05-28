@@ -135,4 +135,4 @@ class ArxivClient:
                 filtered_papers.append(paper)
 
         logger.info(f"关键词过滤后剩余{len(filtered_papers)}篇论文")
-        return filtered_papers 
+        return filtered_papers

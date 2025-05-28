@@ -1,4 +1,4 @@
-name: 🚀 一键设置 ArXiv 论文追踪器
+name: 🚀 部署可行性测试
 
 on:
   workflow_dispatch:
@@ -19,42 +19,26 @@ jobs:
     steps:
     - name: 📋 检查配置状态
       run: |
-        echo "🔍 检查 SOTA AI模型和邮件配置状态..."
+        echo "🔍 检查 DeepSeek AI 和邮件配置状态..."
         echo ""
         
-        # 检查SOTA AI模型配置 (至少需要一个)
-        ai_configured=false
-        
-        if [ -n "${{ secrets.CLAUDE_API_KEY }}" ]; then
-          echo "✅ CLAUDE_API_KEY: 已配置 (🏆 Claude Opus 4 - 世界最强推理模型)"
-          ai_configured=true
-        fi
-        
-        if [ -n "${{ secrets.GEMINI_API_KEY }}" ]; then
-          echo "✅ GEMINI_API_KEY: 已配置 (🔬 Gemini 2.5 Pro Preview - Google最新SOTA)"
-          ai_configured=true
-        fi
-        
-        if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
-          echo "✅ OPENAI_API_KEY: 已配置 (🧠 OpenAI o3 - 推理能力王者)"
-          ai_configured=true
-        fi
-        
+        # 检查DeepSeek API配置 (必需)
         if [ -n "${{ secrets.DEEPSEEK_API_KEY }}" ]; then
-          echo "✅ DEEPSEEK_API_KEY: 已配置 (💰 DeepSeek R1 - 高性价比SOTA)"
+          echo "✅ DEEPSEEK_API_KEY: 已配置 (💰 DeepSeek - 高性价比AI分析)"
           ai_configured=true
+        else
+          echo "❌ DEEPSEEK_API_KEY: 未配置"
+          ai_configured=false
         fi
         
         if [ "$ai_configured" = false ]; then
-          echo "❌ 未配置任何AI API密钥，请至少配置一个AI模型"
+          echo "❌ 未配置DeepSeek API密钥"
           secrets_status="missing"
         else
-          echo "🎯 AI模型配置完成，系统将使用智能降级策略自动选择最佳可用模型"
+          echo "🎯 DeepSeek AI配置完成，系统将使用高性价比的DeepSeek模型进行分析"
         fi
         
         # 检查必需的邮件配置
-        # 保持 secrets_status 的值，不重置
-        
         if [ -z "${{ secrets.SMTP_SERVER }}" ]; then
           echo "❌ SMTP_SERVER: 未配置"
           secrets_status="missing"
@@ -97,12 +81,9 @@ jobs:
           echo "📝 配置步骤："
           echo "1. 进入仓库 Settings → Secrets and variables → Actions"
           echo "2. 点击 'New repository secret'"
-          echo "3. 🤖 添加AI模型API (四选一即可，无需全部配置)："
-          echo "   🏆 CLAUDE_API_KEY: Claude Opus 4 API密钥"
-          echo "   🔬 GEMINI_API_KEY: Gemini 2.5 Pro Preview API密钥"  
-          echo "   🧠 OPENAI_API_KEY: OpenAI o3 API密钥"
-          echo "   💰 DEEPSEEK_API_KEY: DeepSeek R1 API密钥"
-          echo "   ❗ 提示: 选择任意一个配置即可，系统会按优先级使用，失败时自动切换"
+          echo "3. 🤖 添加DeepSeek AI配置 (必需)："
+          echo "   💰 DEEPSEEK_API_KEY: DeepSeek API密钥"
+          echo "   📖 获取地址: https://platform.deepseek.com/"
           echo "4. 📧 添加邮件配置 (必需)："
           echo "   - SMTP_SERVER: 邮件服务器 (如: smtp.gmail.com)"
           echo "   - SMTP_USERNAME: 邮箱账号"
@@ -110,11 +91,11 @@ jobs:
           echo "   - EMAIL_FROM: 发件人邮箱"
           echo "   - EMAIL_TO: 收件人邮箱"
           echo ""
-          echo "📖 详细配置指南: https://github.com/${{ github.repository }}/blob/main/docs/README.md"
+          echo "📖 详细配置指南: https://github.com/${{ github.repository }}/blob/main/docs/setup/DEEPSEEK_SETUP_GUIDE.md"
           exit 1
         else
-          echo "🎉 配置验证成功！AI模型和邮件配置均已就绪"
-          echo "💡 提示: 系统将使用智能降级策略，自动处理AI失败并切换到备用模型"
+          echo "🎉 配置验证成功！DeepSeek AI和邮件配置均已就绪"
+          echo "💡 提示: 系统将使用DeepSeek进行高质量论文分析"
         fi
 
   test-configuration:
@@ -139,22 +120,16 @@ jobs:
     
     - name: 🔍 验证配置
       env:
-        # SOTA AI模型配置
-        CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        # DeepSeek AI配置
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        DEEPSEEK_MODEL: ${{ secrets.DEEPSEEK_MODEL || 'deepseek-chat' }}
         # 邮件配置
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT }}
-        # 失败处理配置
-        MAX_CONSECUTIVE_FAILURES: ${{ secrets.MAX_CONSECUTIVE_FAILURES }}
-        FAILURE_RESET_TIME: ${{ secrets.FAILURE_RESET_TIME }}
-        AI_FALLBACK_ORDER: ${{ secrets.AI_FALLBACK_ORDER }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
       run: |
         echo "🔍 运行配置验证和测试..."
         cd scripts && uv run python validate_env.py
@@ -181,11 +156,9 @@ jobs:
     
     - name: 🧪 运行测试分析
       env:
-        # SOTA AI模型配置
-        CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        # DeepSeek AI配置
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        DEEPSEEK_MODEL: ${{ secrets.DEEPSEEK_MODEL || 'deepseek-chat' }}
         # 邮件配置
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
@@ -195,10 +168,7 @@ jobs:
         # 测试配置
         MAX_PAPERS: 3  # 测试时只分析3篇论文
         SEARCH_DAYS: 1
-        # 失败处理配置
-        MAX_CONSECUTIVE_FAILURES: ${{ secrets.MAX_CONSECUTIVE_FAILURES }}
-        FAILURE_RESET_TIME: ${{ secrets.FAILURE_RESET_TIME }}
-        AI_FALLBACK_ORDER: ${{ secrets.AI_FALLBACK_ORDER }}
+        ANALYSIS_TYPE: comprehensive
       run: |
         echo "🚀 运行测试分析（少量论文）..."
         cd src && uv run python main.py 

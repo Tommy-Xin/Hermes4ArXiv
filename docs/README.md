@@ -2,33 +2,26 @@
 
 ## 🎯 核心文档
 
-### 📧 邮件配置
-- **[Gmail设置指南](setup/GMAIL_SETUP_GUIDE.md)** - Gmail SMTP配置详细步骤
-- **[安全配置](setup/SECURITY.md)** - 密钥管理和安全最佳实践
-
 ### 🤖 AI模型配置  
-- **[SOTA模型指南](setup/SOTA_MODELS_GUIDE.md)** - 顶级AI模型配置和对比
-- **[多AI支持](setup/MULTI_AI_GUIDE.md)** - 多个AI提供商配置和使用
+- **[DeepSeek配置指南](setup/DEEPSEEK_SETUP_GUIDE.md)** - API密钥获取和GitHub Secrets配置
 
-### 🎨 功能扩展
-- **[模板预览指南](setup/TEMPLATE_PREVIEW_GUIDE.md)** - 邮件模板自定义和预览
+### 📧 邮件配置
+- **[Gmail设置指南](setup/GMAIL_SETUP_GUIDE.md)** - Gmail应用专用密码配置步骤
+
+### 🔐 安全配置
+- **[安全配置](setup/SECURITY.md)** - GitHub Secrets管理和安全最佳实践
 
 ## 🚀 快速开始
 
-1. **第一次使用？** 
-   - 参考 [主README](../README.md) 开始配置
-   - 按照 [Gmail设置指南](setup/GMAIL_SETUP_GUIDE.md) 配置邮件
+**第一次使用？** 只需3分钟：
+1. 参考 [主README](../README.md) 了解基本流程
+2. 按照 [DeepSeek配置指南](setup/DEEPSEEK_SETUP_GUIDE.md) 获取API密钥
+3. 参考 [Gmail设置指南](setup/GMAIL_SETUP_GUIDE.md) 配置邮件授权码
+4. 在GitHub Secrets中添加配置，启用Actions即可！
 
-2. **已有配置？**
-   - 查看 [SOTA模型指南](setup/SOTA_MODELS_GUIDE.md) 升级到更强AI模型
-   - 使用 [多AI支持](setup/MULTI_AI_GUIDE.md) 配置多个AI提供商
+## 💡 GitHub Actions专用配置
 
-3. **自定义需求？**
-   - 通过 [模板预览指南](setup/TEMPLATE_PREVIEW_GUIDE.md) 自定义邮件模板
-   - 参考 [安全配置](setup/SECURITY.md) 确保最佳安全实践
-
-## 💡 提示
-
-- 📝 所有文档都包含详细的步骤说明和故障排除
-- 🔧 简化版本专注于核心功能，易于配置和维护
-- 🚀 v2.1版本移除了复杂配置，更适合个人用户
+- 📝 所有文档都专注于GitHub Actions云端部署
+- 🔧 无需本地环境，完全基于云端运行
+- 🚀 DeepSeek AI提供GPT-4级别性能，成本极低
+- 🔒 通过GitHub Secrets安全管理所有密钥

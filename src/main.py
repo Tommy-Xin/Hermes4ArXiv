@@ -11,7 +11,6 @@ from pathlib import Path
 # 添加当前目录到Python路径
 sys.path.insert(0, str(Path(__file__).parent))
 
-# 已使用新的多AI系统，无需导入legacy模块
 from data.arxiv_client import ArxivClient
 from config import Config
 from output.email_sender import EmailSender
@@ -106,7 +105,8 @@ class ArxivPaperTracker:
                     arxiv_client=self.arxiv_client,
                     papers_dir=self.config.PAPERS_DIR,
                     max_workers=optimal_workers,
-                    batch_size=min(len(papers), self.config.BATCH_SIZE)
+                    batch_size=min(len(papers), self.config.BATCH_SIZE),
+                    analysis_type=self.config.ANALYSIS_TYPE
                 )
                 
                 # 执行并行分析
@@ -154,7 +154,7 @@ class ArxivPaperTracker:
                         )
 
                         # 分析论文
-                        analysis = self.ai_analyzer.analyze_paper(paper)
+                        analysis = self.ai_analyzer.analyze_paper(paper, self.config.ANALYSIS_TYPE)
                         
                         # 检查AI分析是否成功
                         if analysis is not None:
@@ -167,7 +167,7 @@ class ArxivPaperTracker:
                         if pdf_path:
                             self.arxiv_client.delete_pdf(pdf_path)
 
-                    except Exception as e:
+    except Exception as e:
                         logger.error(f"处理论文失败 {paper.title}: {e}")
                         failed_papers.append(paper)
                         # 继续处理下一篇论文
@@ -236,7 +236,7 @@ class ArxivPaperTracker:
             stats = self.output_formatter.create_summary_stats(papers_analyses)
             logger.info(f"生成统计信息: {stats}")
 
-        except Exception as e:
+    except Exception as e:
             logger.error(f"生成输出失败: {e}")
             raise
 
@@ -244,9 +244,9 @@ class ArxivPaperTracker:
         """发送邮件报告"""
         if not self.email_sender or not self.config.EMAIL_TO:
             logger.info("邮件配置不完整，跳过发送邮件")
-            return
+        return
 
-        try:
+    try:
             # 生成HTML邮件内容
             html_content = self.output_formatter.format_html_email(papers_analyses)
 
@@ -275,7 +275,7 @@ class ArxivPaperTracker:
         try:
             test_papers = self.arxiv_client.get_recent_papers()
             logger.info(f"ArXiv连接测试成功，找到 {len(test_papers)} 篇论文")
-        except Exception as e:
+    except Exception as e:
             logger.error(f"ArXiv连接测试失败: {e}")
 
         logger.info("组件测试完成")

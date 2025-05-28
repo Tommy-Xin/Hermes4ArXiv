@@ -23,15 +23,10 @@ classifiers = [
 
 dependencies = [
     "arxiv>=1.4.8",
-    "openai>=0.28.0,<1.0.0", # 保持与 DeepSeek API 兼容
+    "openai>=0.28.0,<1.0.0", # DeepSeek API兼容
     "requests>=2.31.0",
     "python-dotenv>=1.0.0",
     "jinja2>=3.1.2",
-    # AI提供商依赖
-    "google-generativeai>=0.3.0", # Gemini API
-    "anthropic>=0.7.0", # Claude API
-    "google-genai>=1.16.1",
-    "httpx[socks]>=0.28.1",
 ]
 
 [project.optional-dependencies]

@@ -29,8 +29,8 @@ class DeepSeekAnalyzer:
         if not api_key or len(api_key) < 10:
             raise ValueError("DeepSeek API密钥无效")
     
-    async def analyze_paper(self, paper: arxiv.Result, analysis_type: str = "comprehensive") -> Dict[str, Any]:
-        """分析论文"""
+    def analyze_paper(self, paper: arxiv.Result, analysis_type: str = "comprehensive") -> Dict[str, Any]:
+        """同步分析论文"""
         import openai
         
         # 使用OpenAI兼容的API
@@ -62,7 +62,7 @@ class DeepSeekAnalyzer:
                 logger.info(f"✅ DeepSeek分析完成: {paper.title[:50]}...")
                 
                 # 添加延迟避免API限制
-                await asyncio.sleep(self.delay)
+                time.sleep(self.delay)
                 
                 return {
                     'analysis': analysis,
@@ -81,13 +81,13 @@ class DeepSeekAnalyzer:
                     if "timeout" in error_msg.lower() or "connection" in error_msg.lower():
                         wait_time = self.delay * (attempt + 2) * 2
                         logger.info(f"网络错误，等待 {wait_time} 秒后重试...")
-                        await asyncio.sleep(wait_time)
+                        time.sleep(wait_time)
                     else:
-                        await asyncio.sleep(self.delay * (attempt + 1))
+                        time.sleep(self.delay * (attempt + 1))
                 
                 if attempt == self.retry_times - 1:
                     raise e
-    
+
     def get_info(self) -> Dict[str, str]:
         """获取分析器信息"""
         return {

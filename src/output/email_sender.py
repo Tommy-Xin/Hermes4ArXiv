@@ -239,21 +239,20 @@ class EmailSender:
                     <div class="solutions">
                         <h3>💡 可能的解决方案</h3>
                         <ul>
-                            <li><strong>检查API密钥</strong>: 确认您的AI API密钥是否有效且有足够余额</li>
-                            <li><strong>配置多个AI模型</strong>: 建议同时配置Claude、Gemini、OpenAI、DeepSeek等多个模型提高可靠性</li>
-                            <li><strong>检查网络连接</strong>: 确认GitHub Actions环境能正常访问AI服务商的API</li>
-                            <li><strong>临时服务中断</strong>: AI服务商可能临时维护，通常几小时后会恢复</li>
-                            <li><strong>配置失败降级</strong>: 检查环境变量MAX_CONSECUTIVE_FAILURES和FAILURE_RESET_TIME设置</li>
+                            <li><strong>检查API密钥</strong>: 确认您的DeepSeek API密钥是否有效且有足够余额</li>
+                            <li><strong>检查网络连接</strong>: 确认GitHub Actions环境能正常访问DeepSeek API服务</li>
+                            <li><strong>临时服务中断</strong>: DeepSeek服务可能临时维护，通常几小时后会恢复</li>
+                            <li><strong>重新生成API密钥</strong>: 登录DeepSeek平台重新生成新的API密钥</li>
+                            <li><strong>检查余额</strong>: 确认DeepSeek账户有足够的API调用余额</li>
                         </ul>
                     </div>
                     
                     <h3>🔧 推荐配置</h3>
-                    <p>为了提高系统可靠性，建议在GitHub Secrets中配置多个AI API密钥：</p>
+                    <p>为了确保系统正常运行，请在GitHub Secrets中正确配置：</p>
                     <ul>
-                        <li><code>CLAUDE_API_KEY</code> - Anthropic Claude (最稳定)</li>
-                        <li><code>GEMINI_API_KEY</code> - Google Gemini (免费层丰厚)</li>
-                        <li><code>OPENAI_API_KEY</code> - OpenAI GPT (广泛支持)</li>
-                        <li><code>DEEPSEEK_API_KEY</code> - DeepSeek (高性价比)</li>
+                        <li><code>DEEPSEEK_API_KEY</code> - DeepSeek API密钥 (必需)</li>
+                        <li>访问 <a href="https://platform.deepseek.com/">DeepSeek平台</a> 获取API密钥</li>
+                        <li>确保API密钥以 <code>sk-</code> 开头</li>
                     </ul>
                     
                     <h3>📊 下次运行</h3>

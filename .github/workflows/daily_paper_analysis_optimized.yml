@@ -1,4 +1,4 @@
-name: 📰 Daily Paper Analysis (Optimized)
+name: 📰 Daily Paper Analysis
 
 on:
   schedule:
@@ -78,42 +78,38 @@ jobs:
     - name: Run paper analysis with timeout
       timeout-minutes: 45  # 为主要任务设置独立超时
       env:
-        # 🤖 智能AI回退系统配置
-        # 优先使用SOTA模型，失败时自动回退到备用AI
-        CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}        # 默认使用gemini-2.5-pro-preview-05-06
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}    # 推荐作为可靠的保底方案
+        # DeepSeek AI 配置
+        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        DEEPSEEK_MODEL: ${{ secrets.DEEPSEEK_MODEL || 'deepseek-chat' }}
         
-        # 🎛️ 高级配置：强制只使用特定AI (可选)
-        PREFERRED_AI_MODEL: ${{ secrets.PREFERRED_AI_MODEL }}
+        # 论文搜索配置
+        CATEGORIES: ${{ secrets.CATEGORIES || 'cs.AI,cs.LG,cs.CL' }}
+        MAX_PAPERS: ${{ secrets.MAX_PAPERS || '50' }}
+        SEARCH_DAYS: ${{ secrets.SEARCH_DAYS || '2' }}
         
-        # 🔧 AI回退顺序配置 (可选)
-        # 默认：SOTA模型优先 (Gemini 2.5 Pro → Claude 3.5 Sonnet → GPT-4 → DeepSeek保底)
-        AI_FALLBACK_ORDER: ${{ secrets.AI_FALLBACK_ORDER || 'gemini,claude,openai,deepseek' }}
-        
-        # 🛡️ 失败处理配置 (可选)
-        MAX_CONSECUTIVE_FAILURES: ${{ secrets.MAX_CONSECUTIVE_FAILURES || '3' }}
-        FAILURE_RESET_TIME: ${{ secrets.FAILURE_RESET_TIME || '300' }}
+        # 分析配置  
+        ANALYSIS_TYPE: ${{ secrets.ANALYSIS_TYPE || 'comprehensive' }}
         
         # 📧 邮件配置
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
         
         # 🔧 可选配置
-        MAX_PAPERS: ${{ secrets.MAX_PAPERS || '50' }}  # 默认50篇论文，可通过Secrets自定义
-        SEARCH_DAYS: ${{ secrets.SEARCH_DAYS || '2' }}
-        ANALYSIS_TYPE: ${{ secrets.ANALYSIS_TYPE || 'comprehensive' }}
         GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         
         # ⚡ 并行处理配置
-        ENABLE_PARALLEL: true
-        MAX_WORKERS: 0  # 自动计算最优线程数
-        BATCH_SIZE: 20
+        ENABLE_PARALLEL: ${{ secrets.ENABLE_PARALLEL || 'true' }}
+        MAX_WORKERS: ${{ secrets.MAX_WORKERS || '0' }}  # 0表示自动计算
+        BATCH_SIZE: ${{ secrets.BATCH_SIZE || '20' }}
+        
+        # API配置
+        API_RETRY_TIMES: ${{ secrets.API_RETRY_TIMES || '3' }}
+        API_DELAY: ${{ secrets.API_DELAY || '2' }}
+        API_TIMEOUT: ${{ secrets.API_TIMEOUT || '60' }}
       run: |
         echo "🚀 开始论文分析..."
         cd src
@@ -193,21 +189,21 @@ jobs:
         echo "❌ 工作流执行失败"
         echo "🕐 失败时间: $(date)"
         echo "🔍 可能的原因："
-        echo "  1. 所有AI都失败 - 检查API密钥和配额"
-        echo "  2. Gemini安全过滤器拦截 - 已有修复器处理"
-        echo "  3. 网络连接问题或超时"
-        echo "  4. 邮件配置错误"
-        echo "  5. ArXiv服务不可用"
-        echo "  6. GitHub Actions缓存服务异常"
+        echo "  1. DeepSeek API 失败 - 检查API密钥和配额"
+        echo "  2. 网络连接问题或超时"
+        echo "  3. 邮件配置错误"
+        echo "  4. ArXiv服务不可用"
+        echo "  5. GitHub Actions缓存服务异常"
         echo ""
         echo "💡 建议解决方案："
-        echo "  - 检查API密钥有效性和余额"
-        echo "  - 确保至少配置了DeepSeek作为备用AI"
+        echo "  - 检查DeepSeek API密钥有效性和余额"
+        echo "  - 登录 https://platform.deepseek.com/ 查看账户状态"
         echo "  - 手动重新运行工作流"
         echo "  - 查看详细日志了解具体错误"
+        echo "  - 确认邮件SMTP配置正确"
         echo ""
-        echo "🤖 智能AI回退系统状态："
-        echo "  - 优先使用: Gemini 2.5 Pro Preview (SOTA)"
-        echo "  - 回退顺序: gemini → claude → openai → deepseek"
-        echo "  - 保底方案: DeepSeek (稳定可靠)"
-        echo "  - 安全过滤器: 已集成修复器" 
+        echo "🤖 DeepSeek AI系统状态："
+        echo "  - 使用模型: DeepSeek Chat (高性价比)"
+        echo "  - 获取API: https://platform.deepseek.com/"
+        echo "  - 成本优势: 比GPT-4便宜30倍"
+        echo "  - 稳定可靠: 专为中文AI应用优化" 
