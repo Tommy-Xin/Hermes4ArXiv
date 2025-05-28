@@ -202,8 +202,3 @@ jobs:
         echo "  - 查看详细日志了解具体错误"
         echo "  - 确认邮件SMTP配置正确"
         echo ""
-        echo "🤖 DeepSeek AI系统状态："
-        echo "  - 使用模型: DeepSeek Chat (高性价比)"
-        echo "  - 获取API: https://platform.deepseek.com/"
-        echo "  - 成本优势: 比GPT-4便宜30倍"
-        echo "  - 稳定可靠: 专为中文AI应用优化" 
