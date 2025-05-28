@@ -6,6 +6,7 @@ AI提示词管理模块
 
 from typing import Dict, List
 import arxiv
+import logging
 
 
 class PromptManager:
@@ -141,14 +142,43 @@ class PromptManager:
         Returns:
             用户提示词
         """
-        # 提取作者信息
-        author_names = [author.name for author in paper.authors]
-        authors_str = ', '.join(author_names[:5])  # 最多显示5个作者
-        if len(author_names) > 5:
-            authors_str += f" 等{len(author_names)}人"
+        # 提取作者信息 - 优先使用正常路径，异常时记录警告
+        authors_str = '未知'
+        if hasattr(paper, 'authors') and paper.authors:
+            try:
+                # 正常情况：直接使用 author.name
+                author_names = [author.name for author in paper.authors]
+                authors_str = ', '.join(author_names[:5])  # 最多显示5个作者
+                if len(author_names) > 5:
+                    authors_str += f" 等{len(author_names)}人"
+            except AttributeError as e:
+                # 异常情况：Author对象结构不正常（不应该发生）
+                logger = logging.getLogger(__name__)
+                logger.warning(f"⚠️ 检测到异常的Author对象结构: {e}")
+                try:
+                    # 备用方案：str()转换
+                    author_names = [str(author) for author in paper.authors[:5]]
+                    authors_str = ', '.join(author_names)
+                    if len(paper.authors) > 5:
+                        authors_str += f" 等{len(paper.authors)}人"
+                    logger.info(f"✅ 使用str()转换成功获取作者信息")
+                except Exception as e2:
+                    logger.error(f"❌ 无法获取作者信息: {e2}")
+                    authors_str = f'作者信息异常 ({len(paper.authors)} 位作者)'
         
-        # 格式化发布时间
-        published_date = paper.published.strftime('%Y年%m月%d日')
+        # 格式化发布时间 - 优先使用正常路径
+        published_date = '未知'
+        if hasattr(paper, 'published') and paper.published:
+            try:
+                published_date = paper.published.strftime('%Y年%m月%d日')
+            except (AttributeError, ValueError) as e:
+                logger = logging.getLogger(__name__)
+                logger.warning(f"⚠️ 发布时间格式异常: {e}")
+                published_date = str(paper.published)
+        elif hasattr(paper, 'published'):
+            # published字段存在但为None（不应该发生）
+            logger = logging.getLogger(__name__)
+            logger.warning("⚠️ 检测到published字段为None")
         
         # 处理摘要长度
         summary = paper.summary.strip()

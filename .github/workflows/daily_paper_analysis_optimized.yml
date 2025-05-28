@@ -83,13 +83,13 @@ jobs:
         CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}        # 默认使用gemini-2.5-pro-preview-05-06
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}    # 推荐作为备用AI
+        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}    # 推荐作为可靠的保底方案
         
         # 🎛️ 高级配置：强制只使用特定AI (可选)
         PREFERRED_AI_MODEL: ${{ secrets.PREFERRED_AI_MODEL }}
         
         # 🔧 AI回退顺序配置 (可选)
-        # 默认：SOTA模型优先，DeepSeek保底
+        # 默认：SOTA模型优先 (Gemini 2.5 Pro → Claude 3.5 Sonnet → GPT-4 → DeepSeek保底)
         AI_FALLBACK_ORDER: ${{ secrets.AI_FALLBACK_ORDER || 'gemini,claude,openai,deepseek' }}
         
         # 🛡️ 失败处理配置 (可选)
@@ -207,6 +207,7 @@ jobs:
         echo "  - 查看详细日志了解具体错误"
         echo ""
         echo "🤖 智能AI回退系统状态："
-        echo "  - 优先使用: Gemini 2.5 Pro Preview"
+        echo "  - 优先使用: Gemini 2.5 Pro Preview (SOTA)"
         echo "  - 回退顺序: gemini → claude → openai → deepseek"
+        echo "  - 保底方案: DeepSeek (稳定可靠)"
         echo "  - 安全过滤器: 已集成修复器" 
