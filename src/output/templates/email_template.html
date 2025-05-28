@@ -136,23 +136,6 @@
         .paper-header {
             padding: 24px 24px 20px;
             border-bottom: 1px solid #f1f3f4;
-            position: relative;
-        }
-        
-        .paper-number {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: #007bff;
-            color: white;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: 600;
         }
         
         .paper-title {
@@ -161,7 +144,6 @@
             color: #2c3e50;
             margin-bottom: 16px;
             line-height: 1.4;
-            padding-right: 50px;
         }
         
         .paper-meta {
@@ -449,7 +431,6 @@
             {% for paper_data in papers %}
             <div class="paper-card">
                 <div class="paper-header">
-                    <div class="paper-number">{{ loop.index }}</div>
                     <h2 class="paper-title">{{ paper_data.title }}</h2>
                     <div class="paper-meta">
                         <div class="meta-item">

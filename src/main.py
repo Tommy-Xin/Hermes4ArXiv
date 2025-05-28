@@ -16,7 +16,7 @@ from config import Config
 from output.email_sender import EmailSender
 from output.formatter import OutputFormatter
 from ai.parallel import ParallelPaperAnalyzer
-from utils.logger import logger
+from src.utils.logger import logger
 
 
 class ArxivPaperTracker:
@@ -296,4 +296,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()
