@@ -6,11 +6,13 @@
 
 import datetime
 import smtplib
+import logging
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List, Optional
 
-from utils.logger import logger
+# 使用标准logging而不是自定义logger
+logger = logging.getLogger(__name__)
 
 
 class EmailSender:
@@ -135,6 +137,134 @@ class EmailSender:
 {error_message}
             </pre>
             <p>请检查配置和日志文件以获取更多信息。</p>
+        </body>
+        </html>
+        """
+
+        return self.send_email(to_emails, subject, content, "html")
+
+    def send_ai_analysis_failure_notification(self, to_emails: List[str], paper_count: int = 0) -> bool:
+        """
+        发送AI分析失败通知邮件
+
+        Args:
+            to_emails: 收件人邮箱列表
+            paper_count: 尝试分析的论文数量
+
+        Returns:
+            发送是否成功
+        """
+        today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        subject = f"🤖 ArXiv论文追踪器 - AI分析失败通知 - {today}"
+
+        content = f"""
+        <html>
+        <head>
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #2c3e50;
+                    background-color: #f8f9fa;
+                    margin: 0;
+                    padding: 20px;
+                }}
+                .container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background: #ffffff;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+                    overflow: hidden;
+                }}
+                .header {{
+                    background: #dc3545;
+                    color: white;
+                    padding: 24px;
+                    text-align: center;
+                }}
+                .content {{
+                    padding: 24px;
+                }}
+                .alert {{
+                    background-color: #f8d7da;
+                    border: 1px solid #f5c6cb;
+                    color: #721c24;
+                    padding: 16px;
+                    border-radius: 4px;
+                    margin: 16px 0;
+                }}
+                .solutions {{
+                    background-color: #d1ecf1;
+                    border: 1px solid #bee5eb;
+                    color: #0c5460;
+                    padding: 16px;
+                    border-radius: 4px;
+                    margin: 16px 0;
+                }}
+                .footer {{
+                    background-color: #f8f9fa;
+                    padding: 16px 24px;
+                    text-align: center;
+                    font-size: 14px;
+                    color: #6c757d;
+                }}
+                h3 {{
+                    color: #495057;
+                    margin-bottom: 8px;
+                }}
+                ul {{
+                    margin: 8px 0;
+                }}
+                li {{
+                    margin: 4px 0;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🤖 AI分析服务异常</h1>
+                    <p>ArXiv论文追踪器无法完成AI分析</p>
+                </div>
+                
+                <div class="content">
+                    <div class="alert">
+                        <h3>⚠️ 问题描述</h3>
+                        <p><strong>时间</strong>: {today}</p>
+                        <p><strong>状态</strong>: 所有AI模型分析失败</p>
+                        <p><strong>影响范围</strong>: 今日{paper_count}篇论文无法生成分析报告</p>
+                    </div>
+                    
+                    <div class="solutions">
+                        <h3>💡 可能的解决方案</h3>
+                        <ul>
+                            <li><strong>检查API密钥</strong>: 确认您的AI API密钥是否有效且有足够余额</li>
+                            <li><strong>配置多个AI模型</strong>: 建议同时配置Claude、Gemini、OpenAI、DeepSeek等多个模型提高可靠性</li>
+                            <li><strong>检查网络连接</strong>: 确认GitHub Actions环境能正常访问AI服务商的API</li>
+                            <li><strong>临时服务中断</strong>: AI服务商可能临时维护，通常几小时后会恢复</li>
+                            <li><strong>配置失败降级</strong>: 检查环境变量MAX_CONSECUTIVE_FAILURES和FAILURE_RESET_TIME设置</li>
+                        </ul>
+                    </div>
+                    
+                    <h3>🔧 推荐配置</h3>
+                    <p>为了提高系统可靠性，建议在GitHub Secrets中配置多个AI API密钥：</p>
+                    <ul>
+                        <li><code>CLAUDE_API_KEY</code> - Anthropic Claude (最稳定)</li>
+                        <li><code>GEMINI_API_KEY</code> - Google Gemini (免费层丰厚)</li>
+                        <li><code>OPENAI_API_KEY</code> - OpenAI GPT (广泛支持)</li>
+                        <li><code>DEEPSEEK_API_KEY</code> - DeepSeek (高性价比)</li>
+                    </ul>
+                    
+                    <h3>📊 下次运行</h3>
+                    <p>系统将在下次计划时间自动重试分析。如果问题持续，请检查上述配置项。</p>
+                </div>
+                
+                <div class="footer">
+                    <p>这是一封自动生成的通知邮件</p>
+                    <p>ArXiv论文追踪器 · 智能学术前沿助手</p>
+                </div>
+            </div>
         </body>
         </html>
         """

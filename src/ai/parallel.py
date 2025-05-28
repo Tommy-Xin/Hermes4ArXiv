@@ -131,6 +131,11 @@ class ParallelPaperAnalyzer:
             # 分析论文
             analysis = self.ai_analyzer.analyze_paper(paper)
             
+            # 检查AI分析是否成功
+            if analysis is None:
+                logger.warning(f"[{thread_id}] AI分析失败，所有模型都无法处理: {paper.title}")
+                return None
+            
             # 清理PDF文件
             if pdf_path:
                 try:

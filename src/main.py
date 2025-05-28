@@ -112,10 +112,33 @@ class ArxivPaperTracker:
                 stats = parallel_analyzer.get_performance_stats()
                 logger.info(f"并行分析统计: {stats}")
                 
+                # 检查并行分析的失败情况
+                failed_count = len(papers) - len(papers_analyses)
+                if failed_count > 0:
+                    logger.warning(f"并行分析中有 {failed_count} 篇论文分析失败")
+                    
+                    # 如果所有论文都失败了
+                    if not papers_analyses:
+                        logger.error("所有论文的AI分析都失败了，发送通知邮件")
+                        if self.email_sender and self.config.EMAIL_TO:
+                            self.email_sender.send_ai_analysis_failure_notification(
+                                self.config.EMAIL_TO, len(papers)
+                            )
+                        return
+                    
+                    # 如果失败比例超过50%
+                    failure_rate = failed_count / len(papers)
+                    if failure_rate >= 0.5:
+                        logger.warning(f"AI分析失败率过高 ({failure_rate*100:.1f}%)，发送通知邮件")
+                        if self.email_sender and self.config.EMAIL_TO:
+                            error_msg = f"并行AI分析失败率过高：{failed_count}/{len(papers)} 篇论文分析失败 ({failure_rate*100:.1f}%)"
+                            self.email_sender.send_error_notification(self.config.EMAIL_TO, error_msg)
+
             else:
                 # 串行分析模式（原有逻辑）
                 logger.info("使用串行分析模式")
                 papers_analyses = []
+                failed_papers = []
 
                 for i, paper in enumerate(papers, 1):
                     logger.info(f"正在处理论文 {i}/{len(papers)}: {paper.title}")
@@ -128,16 +151,47 @@ class ArxivPaperTracker:
 
                         # 分析论文
                         analysis = self.ai_analyzer.analyze_paper(paper)
-                        papers_analyses.append((paper, analysis))
+                        
+                        # 检查AI分析是否成功
+                        if analysis is not None:
+                            papers_analyses.append((paper, analysis))
+                        else:
+                            logger.warning(f"AI分析失败，所有模型都无法处理: {paper.title}")
+                            failed_papers.append(paper)
 
                         # 清理PDF文件
                         if pdf_path:
                             self.arxiv_client.delete_pdf(pdf_path)
 
-                    except Exception as e:
+    except Exception as e:
                         logger.error(f"处理论文失败 {paper.title}: {e}")
+                        failed_papers.append(paper)
                         # 继续处理下一篇论文
                         continue
+
+            # 检查是否所有论文都分析失败了
+            if not papers_analyses and len(papers) > 0:
+                logger.error("所有论文的AI分析都失败了，发送通知邮件")
+                # 发送AI分析失败通知邮件
+                if self.email_sender and self.config.EMAIL_TO:
+                    self.email_sender.send_ai_analysis_failure_notification(
+                        self.config.EMAIL_TO, len(papers)
+                    )
+                return
+
+            # 如果有部分论文分析失败，记录信息
+            if hasattr(locals(), 'failed_papers') and failed_papers:
+                logger.warning(f"有 {len(failed_papers)} 篇论文AI分析失败，成功分析 {len(papers_analyses)} 篇")
+                # 如果失败比例超过50%，也发送通知
+                failure_rate = len(failed_papers) / len(papers)
+                if failure_rate >= 0.5:
+                    logger.warning(f"AI分析失败率过高 ({failure_rate*100:.1f}%)，发送通知邮件")
+                    if self.email_sender and self.config.EMAIL_TO:
+                        # 使用send_error_notification发送高失败率警告
+                        error_msg = f"AI分析失败率过高：{len(failed_papers)}/{len(papers)} 篇论文分析失败 ({failure_rate*100:.1f}%)\n\n失败论文列表：\n" + "\n".join([f"- {paper.title}" for paper in failed_papers[:10]])
+                        if len(failed_papers) > 10:
+                            error_msg += f"\n... 以及其他 {len(failed_papers) - 10} 篇论文"
+                        self.email_sender.send_error_notification(self.config.EMAIL_TO, error_msg)
 
             if not papers_analyses:
                 logger.warning("没有成功分析任何论文")
@@ -178,7 +232,7 @@ class ArxivPaperTracker:
             stats = self.output_formatter.create_summary_stats(papers_analyses)
             logger.info(f"生成统计信息: {stats}")
 
-        except Exception as e:
+    except Exception as e:
             logger.error(f"生成输出失败: {e}")
             raise
 
@@ -186,9 +240,9 @@ class ArxivPaperTracker:
         """发送邮件报告"""
         if not self.email_sender or not self.config.EMAIL_TO:
             logger.info("邮件配置不完整，跳过发送邮件")
-            return
+        return
 
-        try:
+    try:
             # 生成HTML邮件内容
             html_content = self.output_formatter.format_html_email(papers_analyses)
 
@@ -217,7 +271,7 @@ class ArxivPaperTracker:
         try:
             test_papers = self.arxiv_client.get_recent_papers()
             logger.info(f"ArXiv连接测试成功，找到 {len(test_papers)} 篇论文")
-        except Exception as e:
+    except Exception as e:
             logger.error(f"ArXiv连接测试失败: {e}")
 
         logger.info("组件测试完成")

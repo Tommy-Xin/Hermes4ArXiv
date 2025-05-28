@@ -680,24 +680,16 @@ class MultiAIAnalyzer:
                 
                 continue
         
-        # 所有分析器都失败了
+        # 所有分析器都失败了，返回None表示完全失败
         error_msg = f"所有可用的AI提供商都失败了。尝试过的提供商: {[p.value for p in attempted_providers]}。最后错误: {last_error}"
         logger.error(error_msg)
         
-        # 生成失败统计
+        # 生成失败统计用于日志记录
         failure_stats = self._get_failure_stats()
         logger.info(f"失败统计: {failure_stats}")
         
-        return {
-            'analysis': PromptManager.get_error_analysis(str(last_error)),
-            'provider': 'error',
-            'model': 'none',
-            'timestamp': time.time(),
-            'html_analysis': PromptManager.format_analysis_for_html(PromptManager.get_error_analysis(str(last_error))),
-            'error': str(last_error),
-            'attempted_providers': [p.value for p in attempted_providers],
-            'failure_stats': failure_stats
-        }
+        # 返回None表示彻底失败，需要发送邮件通知
+        return None
     
     def _reset_some_failures(self):
         """重置一些失败计数，给AI一次重新尝试的机会"""

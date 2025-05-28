@@ -128,10 +128,10 @@ class AIAnalyzerAdapter:
                     self.multi_analyzer.analyze_paper(paper, self.analysis_type)
                 )
                 
-                # 检查结果是否为None
+                # 检查结果是否为None（所有AI模型都失败）
                 if result is None:
-                    logger.error("❌ 多AI分析返回None结果")
-                    return PromptManager.get_error_analysis("AI分析返回空结果")
+                    logger.error("❌ 多AI分析返回None结果 - 所有AI模型都失败")
+                    return None  # 返回None表示彻底失败，需要发送邮件通知
                 
                 # 提取分析文本
                 analysis_text = result.get('analysis', '')
