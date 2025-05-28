@@ -78,18 +78,19 @@ jobs:
     - name: Run paper analysis with timeout
       timeout-minutes: 45  # 为主要任务设置独立超时
       env:
-        # 🤖 SOTA AI模型配置 (只需配置一个即可)
-        # 系统会自动选择您配置的API对应的模型
+        # 🤖 智能AI回退系统配置
+        # 优先使用SOTA模型，失败时自动回退到备用AI
         CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}        # 默认使用gemini-2.5-pro-preview-05-06
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}    # 推荐作为备用AI
         
-        # 🎛️ 高级配置：用户指定AI模型 (可选)
+        # 🎛️ 高级配置：强制只使用特定AI (可选)
         PREFERRED_AI_MODEL: ${{ secrets.PREFERRED_AI_MODEL }}
         
-        # 🔧 AI降级顺序配置 (可选)
-        AI_FALLBACK_ORDER: ${{ secrets.AI_FALLBACK_ORDER || 'deepseek,openai,claude,gemini' }}
+        # 🔧 AI回退顺序配置 (可选)
+        # 默认：SOTA模型优先，DeepSeek保底
+        AI_FALLBACK_ORDER: ${{ secrets.AI_FALLBACK_ORDER || 'gemini,claude,openai,deepseek' }}
         
         # 🛡️ 失败处理配置 (可选)
         MAX_CONSECUTIVE_FAILURES: ${{ secrets.MAX_CONSECUTIVE_FAILURES || '3' }}
@@ -192,13 +193,20 @@ jobs:
         echo "❌ 工作流执行失败"
         echo "🕐 失败时间: $(date)"
         echo "🔍 可能的原因："
-        echo "  1. 网络连接问题或超时"
-        echo "  2. API密钥无效或余额不足"
-        echo "  3. 邮件配置错误"
-        echo "  4. ArXiv服务不可用"
-        echo "  5. GitHub Actions缓存服务异常"
+        echo "  1. 所有AI都失败 - 检查API密钥和配额"
+        echo "  2. Gemini安全过滤器拦截 - 已有修复器处理"
+        echo "  3. 网络连接问题或超时"
+        echo "  4. 邮件配置错误"
+        echo "  5. ArXiv服务不可用"
+        echo "  6. GitHub Actions缓存服务异常"
         echo ""
         echo "💡 建议解决方案："
-        echo "  - 检查网络连接和API配置"
+        echo "  - 检查API密钥有效性和余额"
+        echo "  - 确保至少配置了DeepSeek作为备用AI"
         echo "  - 手动重新运行工作流"
-        echo "  - 查看详细日志了解具体错误" 
+        echo "  - 查看详细日志了解具体错误"
+        echo ""
+        echo "🤖 智能AI回退系统状态："
+        echo "  - 优先使用: Gemini 2.5 Pro Preview"
+        echo "  - 回退顺序: gemini → claude → openai → deepseek"
+        echo "  - 安全过滤器: 已集成修复器" 
