@@ -10,7 +10,7 @@
    DEEPSEEK_API_KEY=sk-your-api-key        # 必需：DeepSeek API密钥
    SMTP_USERNAME=your-email@gmail.com      # 必需：发送邮箱
    SMTP_PASSWORD=your-app-password         # 必需：邮箱授权码
-   EMAIL_TO=recipient@gmail.com            # 必需：接收邮箱
+   EMAIL_TO=recipient@gmail.com            # 必需：接收邮箱(支持多人，用","隔开)
    ```
 
 3. **启用Actions**：GitHub Actions 将每日北京时间8:00自动运行
