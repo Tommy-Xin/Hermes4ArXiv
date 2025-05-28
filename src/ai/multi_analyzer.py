@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-多AI分析器模块
-支持多个AI提供商的降级策略和失败检测
+智能AI回退系统模块
+支持单AI使用 + 智能回退策略，确保论文分析的高可靠性
 """
 
 import asyncio
@@ -410,10 +410,13 @@ class GeminiAnalyzer(BaseAIAnalyzer):
 
 class MultiAIAnalyzer:
     """
-    多AI分析器 - 智能降级分析器
+    智能AI回退系统 - 主AI + 备用AI降级策略
     
-    使用降级策略（fallback）按顺序尝试多个AI提供商，
-    直到找到一个可用的为止。支持智能失败检测和自动禁用。
+    工作原理：
+    1. 优先使用您配置的主要AI（如Gemini 2.5 Pro Preview）
+    2. 当主AI失败时，自动切换到备用AI（如DeepSeek）
+    3. 每篇论文只使用一个AI分析，确保成本可控
+    4. 支持智能失败检测和临时禁用机制
     """
     
     def __init__(self, config: Dict[str, Any]):

@@ -1,288 +1,229 @@
-# 🤖 多AI分析器使用指南
+# 🤖 智能AI回退系统使用指南
 
-Hermes4ArXiv现在支持多个AI提供商，提供更强大的分析能力和更高的可靠性。
+Hermes4ArXiv采用智能AI回退系统，确保论文分析的高可靠性。您可以配置一个主要AI和多个备用AI，当主要AI失败时自动切换到备用AI。
 
-## 🎯 功能特色
+## 🎯 核心概念
 
-### ✨ 多AI支持
-- **DeepSeek**: 高性价比的中文AI模型（默认）
-- **OpenAI GPT**: 业界领先的AI模型
-- **Claude**: Anthropic的安全可靠AI助手
-- **Gemini**: Google的多模态AI模型
+### ✨ 智能回退策略
+- **主要AI**: 您首选的AI模型（如Gemini 2.5 Pro Preview）
+- **备用AI**: 当主要AI失败时自动使用的备选方案
+- **自动切换**: 系统智能检测失败并自动回退
+- **单次分析**: 每篇论文只使用一个AI分析，不重复调用
 
-### 🔄 智能策略
-- **降级策略**: 按顺序尝试，确保分析成功
-- **并行策略**: 同时调用多个AI，使用最快结果
-- **共识策略**: 多个AI达成共识，提高准确性
-- **尽力而为**: 尝试所有策略，最大化成功率
+### 🔄 工作原理
+1. 系统首先使用您配置的主要AI
+2. 如果主要AI失败（网络问题、API限制、安全过滤器等）
+3. 自动切换到第一个备用AI
+4. 如果仍然失败，继续尝试下一个备用AI
+5. 直到成功或所有AI都尝试完毕
 
-### 📝 优质提示词
-- **综合分析**: 400-600字的深度分析
-- **快速分析**: 200-300字的简洁分析
-- **详细分析**: 600-900字的技术深度分析
+## 🚀 推荐配置
 
-## 🚀 快速开始
-
-### 基础配置（仅DeepSeek）
+### 方案一：Gemini主要 + DeepSeek备用（推荐）
 ```bash
-# 只需配置DeepSeek API密钥
+# 主要AI：Gemini 2.5 Pro Preview（最新SOTA模型）
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-2.5-pro-preview-05-06
+
+# 备用AI：DeepSeek（高性价比备选）
 DEEPSEEK_API_KEY=sk-your-deepseek-api-key
+
+# AI使用顺序（主要→备用）
+AI_FALLBACK_ORDER=gemini,deepseek
+
+# 分析配置
+ANALYSIS_TYPE=comprehensive
 ```
 
-### 多AI配置（SOTA模型优先）
+### 方案二：Claude主要 + DeepSeek备用
 ```bash
-# 主要AI（推荐使用SOTA模型）
+# 主要AI：Claude 3.5 Sonnet（推理能力强）
 CLAUDE_API_KEY=sk-ant-your-claude-api-key
-OPENAI_API_KEY=sk-your-openai-api-key
-
-# 备用AI（高性价比选择）
-DEEPSEEK_API_KEY=sk-your-deepseek-api-key
-GEMINI_API_KEY=your-gemini-api-key
-
-# 分析策略配置（SOTA模型优先）
-ANALYSIS_STRATEGY=fallback
-AI_FALLBACK_ORDER=claude,openai,gemini,deepseek
-ANALYSIS_TYPE=comprehensive
-
-# 使用最新SOTA模型
 CLAUDE_MODEL=claude-3-5-sonnet-20241022
-OPENAI_MODEL=gpt-4-turbo-preview
+
+# 备用AI：DeepSeek
+DEEPSEEK_API_KEY=sk-your-deepseek-api-key
+
+# AI使用顺序
+AI_FALLBACK_ORDER=claude,deepseek
+```
+
+### 方案三：仅使用单一AI（经济型）
+```bash
+# 只配置一个AI，无备用方案
+DEEPSEEK_API_KEY=sk-your-deepseek-api-key
 ```
 
 ## 📋 配置详解
 
-### AI分析策略
+### 环境变量说明
 
-#### 1. 降级策略（fallback）- 推荐
+#### AI API密钥（选择配置）
 ```bash
-ANALYSIS_STRATEGY=fallback
-AI_FALLBACK_ORDER=deepseek,openai,claude,gemini
+# Gemini API（Google AI Studio获取）
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-2.5-pro-preview-05-06  # 可选，默认使用此模型
+
+# Claude API（Anthropic Console获取）
+CLAUDE_API_KEY=sk-ant-your-claude-api-key
+CLAUDE_MODEL=claude-3-5-sonnet-20241022    # 可选
+
+# OpenAI API
+OPENAI_API_KEY=sk-your-openai-api-key
+OPENAI_MODEL=gpt-4-turbo-preview           # 可选
+
+# DeepSeek API（高性价比选择）
+DEEPSEEK_API_KEY=sk-your-deepseek-api-key
+DEEPSEEK_MODEL=deepseek-chat               # 可选
 ```
 
-**特点**：
-- ✅ 按顺序尝试AI，第一个成功即返回
-- ✅ 成本最低，优先使用便宜的AI
-- ✅ 高可靠性，有多个备选方案
-- ✅ 适合日常使用
-
-**使用场景**：日常论文分析，追求稳定性和成本效益
-
-#### 2. 并行策略（parallel）
+#### 回退策略配置
 ```bash
-ANALYSIS_STRATEGY=parallel
+# AI使用顺序（从左到右尝试）
+AI_FALLBACK_ORDER=gemini,deepseek,claude,openai
+
+# 单一AI使用（不想要备用AI）
+PREFERRED_AI_MODEL=gemini  # 只使用指定的AI
 ```
 
-**特点**：
-- ⚡ 同时调用多个AI，使用最快结果
-- 💰 成本较高，会同时消耗多个API
-- 🚀 速度最快，适合紧急情况
-- 🎯 结果质量高，使用最快响应的AI
-
-**使用场景**：紧急分析，对速度要求高的场景
-
-#### 3. 共识策略（consensus）
+#### 分析类型
 ```bash
-ANALYSIS_STRATEGY=consensus
-```
-
-**特点**：
-- 🎯 多个AI达成共识，结果更准确
-- 💰 成本最高，需要调用多个AI
-- 🔬 质量最高，适合重要论文分析
-- ⏱️ 速度较慢，需要等待多个AI完成
-
-**使用场景**：重要论文分析，对准确性要求极高的场景
-
-#### 4. 尽力而为（best_effort）
-```bash
-ANALYSIS_STRATEGY=best_effort
-```
-
-**特点**：
-- 🛡️ 最高可靠性，尝试所有策略
-- 🔄 自动降级，从共识→并行→降级
-- 💪 适合网络不稳定的环境
-- ⚖️ 平衡成本和质量
-
-**使用场景**：网络不稳定，对成功率要求极高的场景
-
-### 分析类型
-
-#### 综合分析（comprehensive）- 推荐
-```bash
+# comprehensive: 400-600字全面分析（推荐）
+# quick: 200-300字快速分析
+# detailed: 600-900字详细分析
 ANALYSIS_TYPE=comprehensive
 ```
-- 📊 **长度**: 400-600字
-- 🎯 **特点**: 五维度深度分析
-- 💡 **适用**: 日常使用，平衡详细度和可读性
 
-#### 快速分析（quick）
+## 🛡️ 失败处理机制
+
+### 智能失败检测
+- **API错误**: 自动重试3次，失败后切换到备用AI
+- **安全过滤器**: Gemini安全过滤器触发时立即切换到备用AI
+- **网络超时**: 30秒超时后自动切换
+- **配额限制**: API配额耗尽时切换到备用AI
+
+### 临时禁用机制
+- AI连续失败3次后临时禁用5分钟
+- 其他AI正常时，被禁用的AI会自动恢复
+- 防止在故障AI上浪费时间
+
+## 💰 成本考虑
+
+### 推荐搭配（性价比最优）
 ```bash
-ANALYSIS_TYPE=quick
-```
-- ⚡ **长度**: 200-300字
-- 🎯 **特点**: 简洁精准，突出要点
-- 💡 **适用**: 大量论文快速筛选
-
-#### 详细分析（detailed）
-```bash
-ANALYSIS_TYPE=detailed
-```
-- 🔬 **长度**: 600-900字
-- 🎯 **特点**: 技术深度分析
-- 💡 **适用**: 重要论文深度研究
-
-## 🔧 高级配置
-
-### 自定义AI模型
-```bash
-# 指定具体的AI模型
-DEEPSEEK_MODEL=deepseek-chat
-OPENAI_MODEL=gpt-4  # 使用GPT-4（成本更高但质量更好）
-CLAUDE_MODEL=claude-3-sonnet-20240229  # 使用更强的Claude模型
-GEMINI_MODEL=gemini-pro
-```
-
-### 自定义降级顺序
-```bash
-# 优先使用OpenAI，然后是DeepSeek
-AI_FALLBACK_ORDER=openai,deepseek,claude,gemini
-
-# 只使用特定的AI
-AI_FALLBACK_ORDER=deepseek,openai
-```
-
-## 🧪 测试和验证
-
-### 本地测试
-```bash
-# 测试多AI功能
-make test-multi-ai
-
-# 测试组件
-make test-components
-
-# 验证环境配置
-make validate-env
-```
-
-### GitHub Actions测试
-1. 在仓库的 `Actions` 页面手动触发工作流
-2. 查看日志中的AI分析器信息
-3. 检查邮件中的分析质量
-
-## 💰 成本优化建议
-
-### 经济型配置
-```bash
-# 只使用DeepSeek，成本最低
+# 主要使用高性价比的DeepSeek
 DEEPSEEK_API_KEY=sk-your-key
-ANALYSIS_STRATEGY=fallback
-ANALYSIS_TYPE=quick
+AI_FALLBACK_ORDER=deepseek
+
+# 成本：约￥0.01-0.02/篇论文
 ```
 
-### 平衡型配置（推荐）
+### 质量优先搭配
 ```bash
-# SOTA模型 + 高性价比降级
-CLAUDE_API_KEY=sk-your-claude-key
-DEEPSEEK_API_KEY=sk-your-deepseek-key
-ANALYSIS_STRATEGY=fallback
-AI_FALLBACK_ORDER=claude,deepseek
-ANALYSIS_TYPE=comprehensive
-CLAUDE_MODEL=claude-3-5-sonnet-20241022
+# 主要使用SOTA模型，DeepSeek作备用
+GEMINI_API_KEY=your-gemini-key
+DEEPSEEK_API_KEY=sk-your-deepseek-key  
+AI_FALLBACK_ORDER=gemini,deepseek
+
+# 大部分时候使用Gemini，失败时用DeepSeek保底
 ```
 
-### 高质量配置（SOTA模型优先）
+### 极致可靠性搭配
 ```bash
-# 多个SOTA模型共识分析
-CLAUDE_API_KEY=sk-your-claude-key
-OPENAI_API_KEY=sk-your-openai-key
+# 配置多个备用AI
+CLAUDE_API_KEY=sk-ant-your-claude-key
+GEMINI_API_KEY=your-gemini-key
 DEEPSEEK_API_KEY=sk-your-deepseek-key
-ANALYSIS_STRATEGY=consensus
-AI_FALLBACK_ORDER=claude,openai,deepseek
-ANALYSIS_TYPE=detailed
-CLAUDE_MODEL=claude-3-5-sonnet-20241022
-OPENAI_MODEL=gpt-4-turbo-preview
+AI_FALLBACK_ORDER=claude,gemini,deepseek
+
+# 三重保险，确保分析成功
 ```
 
 ## 🔍 故障排除
 
 ### 常见问题
 
-#### Q: 多AI功能没有启用？
-**A**: 检查以下条件：
-- 配置了多个有效的API密钥
-- 或者设置了非默认的分析策略
-- API密钥长度大于10个字符
-
-#### Q: 分析失败，显示"所有AI提供商都不可用"？
+#### Q: 为什么Gemini一直失败？
 **A**: 可能的原因：
-1. **API密钥无效**: 检查密钥格式和有效性
-2. **网络问题**: 检查网络连接
-3. **API额度不足**: 检查各AI平台的余额
-4. **API限制**: 降低调用频率
+1. **安全过滤器拦截**: 这是常见问题，系统会自动切换到备用AI
+2. **地理位置限制**: 本地测试可能有限制，GitHub Actions中正常
+3. **API密钥问题**: 检查密钥是否正确
+4. **模型不可用**: 某些Preview模型可能暂时不可用
 
-#### Q: 成本过高？
-**A**: 优化建议：
-1. 使用 `fallback` 策略而非 `parallel` 或 `consensus`
-2. 优先使用成本较低的AI（如DeepSeek）
-3. 使用 `quick` 分析类型减少token消耗
-4. 减少论文数量或分析频率
+#### Q: 如何确保至少有一个AI可用？
+**A**: 建议配置：
+```bash
+# 至少配置DeepSeek作为保底
+DEEPSEEK_API_KEY=sk-your-key
+# 再配置你想要的主要AI
+GEMINI_API_KEY=your-key
+AI_FALLBACK_ORDER=gemini,deepseek
+```
 
-#### Q: 分析质量不满意？
-**A**: 改进建议：
-1. 使用 `detailed` 分析类型
-2. 尝试 `consensus` 策略
-3. 使用更强的AI模型（如GPT-4、Claude Sonnet）
-4. 调整降级顺序，优先使用质量更高的AI
+#### Q: 如何只使用特定的AI，不要回退？
+**A**: 使用PREFERRED_AI_MODEL：
+```bash
+GEMINI_API_KEY=your-key
+PREFERRED_AI_MODEL=gemini  # 只使用Gemini，失败就失败
+```
+
+#### Q: 回退是否会影响分析质量？
+**A**: 不会：
+- 每个AI都使用相同的分析提示词
+- 备用AI（如DeepSeek）质量也很高
+- 系统只是确保分析能够完成
 
 ### 调试技巧
 
-#### 查看分析器状态
+#### 查看AI使用情况
 ```bash
-# 运行测试脚本查看详细信息
-cd src && python test_multi_ai.py
+# 在GitHub Actions日志中搜索：
+# "✅ 配置验证通过！已配置的AI模型"
+# "使用 gemini 分析论文"
+# "✅ gemini 分析成功"
 ```
 
-#### 检查日志
+#### 测试AI连接
 ```bash
-# 查看GitHub Actions日志
-# 搜索关键词：AI分析器、多AI、分析策略
+# 本地测试（在项目根目录）
+cd scripts && python validate_env.py
 ```
 
 ## 📚 API密钥获取
 
-### DeepSeek
+### Gemini API（推荐主要AI）
+1. 访问 [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. 使用Google账号登录
+3. 创建新的API密钥
+4. **注意**: Gemini 2.5 Pro Preview可能有地理限制
+
+### DeepSeek API（推荐备用AI）
 1. 访问 [DeepSeek平台](https://platform.deepseek.com/)
 2. 注册并登录账号
 3. 进入API管理页面
 4. 创建新的API密钥
+5. **优势**: 性价比高，地理限制少
 
-### OpenAI
-1. 访问 [OpenAI平台](https://platform.openai.com/)
-2. 注册并登录账号
-3. 进入API Keys页面
-4. 创建新的API密钥
-
-### Claude
+### Claude API
 1. 访问 [Anthropic控制台](https://console.anthropic.com/)
 2. 注册并登录账号
 3. 进入API Keys页面
 4. 创建新的API密钥
 
-### Gemini
-1. 访问 [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. 使用Google账号登录
-3. 创建新的API密钥
+### OpenAI API
+1. 访问 [OpenAI平台](https://platform.openai.com/)
+2. 注册并登录账号
+3. 进入API Keys页面
+4. 创建新的API密钥
 
 ## 🎉 最佳实践
 
-1. **渐进式配置**: 先配置DeepSeek，确保基本功能正常，再添加其他AI
-2. **成本控制**: 使用降级策略，优先使用成本较低的AI
-3. **质量优化**: 对重要论文使用详细分析或共识策略
-4. **监控使用**: 定期检查各AI平台的使用量和余额
-5. **备份方案**: 至少配置2个AI提供商，确保服务可用性
+1. **双AI策略**: 配置一个主要AI + DeepSeek作备用
+2. **成本控制**: 主要使用DeepSeek，特殊需求时使用高端AI
+3. **可靠性优先**: 至少配置两个不同提供商的AI
+4. **监控使用**: 定期检查API使用量和成本
+5. **GitHub Actions测试**: 本地可能有地理限制，以GitHub Actions结果为准
 
 ---
 
-🤖 **愿多AI的智慧，为您带来更精准的学术洞察！** 
+🤖 **一个主要AI + 智能回退，让您的论文分析更可靠！** 
