@@ -31,13 +31,13 @@ class OutputFormatter:
         self.env = Environment(loader=FileSystemLoader(str(templates_dir)))
 
     def format_markdown(
-        self, papers_analyses: List[Tuple[arxiv.Result, str]], title: str = None
+        self, papers_analyses: List[Tuple[arxiv.Result, Dict[str, Any]]], title: str = None
     ) -> str:
         """
         格式化为Markdown格式
 
         Args:
-            papers_analyses: 论文分析结果列表
+            papers_analyses: 论文分析结果列表，每个元素为(paper, analysis_dict)
             title: 标题
 
         Returns:
@@ -52,25 +52,31 @@ class OutputFormatter:
         content += f"**生成时间**: {today}\n"
         content += f"**论文数量**: {len(papers_analyses)}\n\n"
 
-        for i, (paper, analysis) in enumerate(papers_analyses, 1):
+        for i, (paper, analysis_result) in enumerate(papers_analyses, 1):
             author_names = [author.name for author in paper.authors]
+            
+            # 处理分析内容 - 从字典中提取实际分析文本
+            if isinstance(analysis_result, dict):
+                analysis_text = analysis_result.get('analysis', '分析暂时不可用')
+            else:
+                analysis_text = analysis_result or '分析暂时不可用'
 
             content += f"## {i}. {paper.title}\n\n"
             content += f"**👥 作者**: {', '.join(author_names)}\n\n"
             content += f"**🏷️ 类别**: {', '.join(paper.categories)}\n\n"
             content += f"**📅 发布日期**: {paper.published.strftime('%Y-%m-%d')}\n\n"
             content += f"**🔗 链接**: [{paper.entry_id}]({paper.entry_id})\n\n"
-            content += f"### 📝 分析结果\n\n{analysis}\n\n"
+            content += f"### 📝 分析结果\n\n{analysis_text}\n\n"
             content += "---\n\n"
 
         return content
 
-    def format_html_email(self, papers_analyses: List[Tuple[arxiv.Result, str]]) -> str:
+    def format_html_email(self, papers_analyses: List[Tuple[arxiv.Result, Dict[str, Any]]]) -> str:
         """
         格式化为HTML邮件格式
 
         Args:
-            papers_analyses: 论文分析结果列表
+            papers_analyses: 论文分析结果列表，每个元素为(paper, analysis_dict)
 
         Returns:
             HTML格式的邮件内容
@@ -87,12 +93,21 @@ class OutputFormatter:
         papers_data = []
         categories_set = set()
 
-        for paper, analysis in papers_analyses:
+        for paper, analysis_result in papers_analyses:
             author_names = [author.name for author in paper.authors]
             categories_set.update(paper.categories)
 
-            # 处理分析内容，转换为HTML格式
-            analysis_html = self._convert_analysis_to_html(analysis)
+            # 处理分析内容 - 从字典中提取实际分析文本
+            if isinstance(analysis_result, dict):
+                # 优先使用html_analysis，如果不存在则使用analysis
+                if 'html_analysis' in analysis_result and analysis_result['html_analysis']:
+                    analysis_html = analysis_result['html_analysis']
+                else:
+                    analysis_text = analysis_result.get('analysis', '分析暂时不可用')
+                    analysis_html = self._convert_analysis_to_html(analysis_text)
+            else:
+                # 兼容旧格式，直接是字符串
+                analysis_html = self._convert_analysis_to_html(analysis_result)
 
             # 生成PDF链接
             pdf_url = paper.pdf_url if hasattr(paper, 'pdf_url') else paper.entry_id.replace('/abs/', '/pdf/') + '.pdf'
@@ -256,7 +271,7 @@ class OutputFormatter:
         return text
 
     def _fallback_html_format(
-        self, papers_analyses: List[Tuple[arxiv.Result, str]]
+        self, papers_analyses: List[Tuple[arxiv.Result, Dict[str, Any]]]
     ) -> str:
         """
         备用HTML格式化方法
@@ -338,9 +353,15 @@ class OutputFormatter:
             </div>
         """
 
-        for i, (paper, analysis) in enumerate(papers_analyses, 1):
+        for i, (paper, analysis_result) in enumerate(papers_analyses, 1):
             author_names = [author.name for author in paper.authors]
             pdf_url = paper.entry_id.replace('/abs/', '/pdf/') + '.pdf'
+            
+            # 处理分析内容 - 从字典中提取实际分析文本
+            if isinstance(analysis_result, dict):
+                analysis_text = analysis_result.get('analysis', '分析暂时不可用')
+            else:
+                analysis_text = analysis_result or '分析暂时不可用'
 
             html += f"""
             <div class="paper">
@@ -350,7 +371,7 @@ class OutputFormatter:
                     <strong>🏷️ 类别</strong>: {', '.join(paper.categories)}<br>
                     <strong>📅 发布日期</strong>: {paper.published.strftime('%Y年%m月%d日')}<br>
                 </div>
-                <div class="analysis">{analysis.replace(chr(10), '<br>')}</div>
+                <div class="analysis">{analysis_text.replace(chr(10), '<br>')}</div>
                 <div>
                     <a href="{paper.entry_id}" class="paper-link">🔗 查看原文</a>
                     <a href="{pdf_url}" class="paper-link" style="margin-left: 10px;">📄 下载PDF</a>
@@ -385,7 +406,7 @@ class OutputFormatter:
             logger.error(f"保存文件失败 {file_path}: {e}")
 
     def create_summary_stats(
-        self, papers_analyses: List[Tuple[arxiv.Result, str]]
+        self, papers_analyses: List[Tuple[arxiv.Result, Dict[str, Any]]]
     ) -> Dict[str, Any]:
         """
         创建统计摘要
@@ -403,7 +424,7 @@ class OutputFormatter:
         authors = set()
         dates = []
 
-        for paper, _ in papers_analyses:
+        for paper, analysis_result in papers_analyses:
             # 统计类别
             for cat in paper.categories:
                 categories[cat] = categories.get(cat, 0) + 1
