@@ -339,164 +339,72 @@ class ClaudeAnalyzer(BaseAIAnalyzer):
 
 
 class GeminiAnalyzer(BaseAIAnalyzer):
-    """Gemini分析器 - 增强版本，支持finish_reason检测"""
+    """Gemini分析器 - 使用增强版修复器，解决安全过滤器问题"""
     
-    # Gemini finish_reason 映射
-    FINISH_REASON_MAP = {
-        0: "FINISH_REASON_UNSPECIFIED",
-        1: "STOP",
-        2: "SAFETY",
-        3: "RECITATION", 
-        4: "MAX_TOKENS",
-        5: "OTHER"
-    }
-    
-    def __init__(self, api_key: str, model: str = "gemini-pro", **kwargs):
+    def __init__(self, api_key: str, model: str = "gemini-2.5-pro-preview-05-06", **kwargs):
         super().__init__(api_key, model, **kwargs)
-        # 针对安全过滤器的特殊处理
-        self.safety_failure_count = 0
-        self.max_safety_failures = 1  # 连续1次安全过滤失败就跳过，避免浪费时间
+        self.fixer = None
+        self._initialize_fixer()
+    
+    def _initialize_fixer(self):
+        """初始化Gemini修复器"""
+        try:
+            # 导入我们的修复器
+            from ai.gemini_fix import GeminiAPIFixer
+            
+            self.fixer = GeminiAPIFixer(
+                api_key=self.api_key,
+                model=self.model,
+                retry_times=self.retry_times,
+                delay=self.delay
+            )
+            logger.info(f"✅ Gemini修复器初始化成功，模型: {self.model}")
+        except Exception as e:
+            logger.error(f"❌ Gemini修复器初始化失败: {e}")
+            self.fixer = None
+            self.is_available_flag = False
     
     async def analyze_paper(self, paper: arxiv.Result, analysis_type: str = "comprehensive") -> Dict[str, Any]:
         """分析论文"""
+        if not self.fixer:
+            raise Exception("Gemini修复器未初始化")
+        
         try:
-            import google.generativeai as genai
-        except ImportError:
-            raise ImportError("需要安装 google-generativeai 库: pip install google-generativeai")
-        
-        genai.configure(api_key=self.api_key)
-        model = genai.GenerativeModel(self.model)
-        
-        system_prompt = PromptManager.get_system_prompt(analysis_type)
-        user_prompt = PromptManager.get_user_prompt(paper, analysis_type)
-        
-        # 为Gemini优化提示，使用更学术化的语言
-        academic_system_prompt = """You are an academic research assistant specializing in analyzing scientific papers. Please provide a comprehensive analysis of the given research paper, focusing on its technical contributions and academic significance."""
-        
-        # 合并系统提示和用户提示，使用学术化的语言
-        full_prompt = f"{academic_system_prompt}\n\nPlease analyze this research paper:\n\nTitle: {paper.title}\n\nSummary: {paper.summary}\n\nProvide a detailed academic analysis."""
-        
-        for attempt in range(self.retry_times):
-            try:
-                logger.info(f"Gemini分析论文: {paper.title[:50]}... (尝试 {attempt + 1}/{self.retry_times})")
-                
-                # 配置安全设置 - 最宽松设置
-                safety_settings = [
-                    {
-                        "category": "HARM_CATEGORY_HARASSMENT",
-                        "threshold": "BLOCK_NONE"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_HATE_SPEECH", 
-                        "threshold": "BLOCK_NONE"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        "threshold": "BLOCK_NONE"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        "threshold": "BLOCK_NONE"
-                    }
-                ]
-                
-                response = model.generate_content(
-                    full_prompt,
-                    generation_config=genai.types.GenerationConfig(
-                        max_output_tokens=1500,
-                        temperature=0.7,
-                    ),
-                    safety_settings=safety_settings
-                )
-                
-                # 检查响应状态
-                if not self._validate_response(response, paper.title):
-                    continue  # 继续下一次尝试
-                
-                analysis = response.text
-                logger.info(f"Gemini分析完成: {paper.title[:50]}...")
-                
-                # 重置安全失败计数
-                self.safety_failure_count = 0
-                
-                await asyncio.sleep(self.delay)
-                
-                return self._format_analysis_result(analysis, "gemini", self.model)
-                
-            except Exception as e:
-                logger.warning(f"Gemini分析失败 (尝试 {attempt + 1}): {str(e)}")
-                
-                # 检查是否是安全过滤器问题
-                if self._is_safety_issue(str(e)):
-                    self.safety_failure_count += 1
-                    logger.warning(f"Gemini安全过滤器触发 (连续 {self.safety_failure_count} 次)")
-                    
-                    if self.safety_failure_count >= self.max_safety_failures:
-                        logger.error(f"Gemini连续 {self.safety_failure_count} 次触发安全过滤器，建议切换到其他AI")
-                        raise Exception("GEMINI_SAFETY_FILTER_REPEATEDLY_TRIGGERED")
-                
-                if attempt < self.retry_times - 1:
-                    await asyncio.sleep(self.delay * (attempt + 1))
-                else:
-                    raise e
-    
-    def _validate_response(self, response, paper_title: str) -> bool:
-        """验证Gemini响应状态"""
-        try:
-            # 检查是否有候选结果
-            if not response.candidates:
-                logger.warning(f"Gemini响应无候选结果: {paper_title[:50]}")
-                return False
+            logger.info(f"Gemini修复器分析论文: {paper.title[:50]}...")
             
-            candidate = response.candidates[0]
-            finish_reason = candidate.finish_reason
+            # 使用我们的修复器进行分析
+            result = await self.fixer.analyze_paper(paper, analysis_type)
             
-            # 获取finish_reason的可读名称
-            reason_name = self.FINISH_REASON_MAP.get(finish_reason, f"UNKNOWN({finish_reason})")
-            
-            if finish_reason == 1:  # STOP - 正常完成
-                return True
-            elif finish_reason == 2:  # SAFETY - 安全过滤器拦截
-                logger.warning(f"Gemini安全过滤器拦截: {paper_title[:50]}, finish_reason: {reason_name}")
-                self.safety_failure_count += 1
-                return False
-            elif finish_reason == 3:  # RECITATION - 重复内容检测
-                logger.warning(f"Gemini重复内容检测: {paper_title[:50]}, finish_reason: {reason_name}")
-                return False
-            elif finish_reason == 4:  # MAX_TOKENS - 达到最大token数
-                logger.warning(f"Gemini达到最大token数: {paper_title[:50]}, finish_reason: {reason_name}")
-                # 虽然没有完整输出，但可能有部分有用内容
-                if hasattr(response, 'text') and response.text:
-                    return True
-                return False
+            if result:
+                logger.info(f"✅ Gemini修复器分析完成: {paper.title[:50]}...")
+                
+                # 确保返回正确的格式
+                return {
+                    'analysis': result['analysis'],
+                    'provider': 'gemini',
+                    'model': result['model'],
+                    'timestamp': result['timestamp'],
+                    'html_analysis': PromptManager.format_analysis_for_html(result['analysis']),
+                    'api_version': result.get('api_version', 'unknown'),
+                    'analysis_type': result.get('analysis_type', analysis_type)
+                }
             else:
-                logger.warning(f"Gemini未知finish_reason: {reason_name}, 论文: {paper_title[:50]}")
-                return False
+                raise Exception("Gemini修复器返回空结果，可能是地理位置限制或其他问题")
                 
         except Exception as e:
-            logger.error(f"验证Gemini响应时出错: {e}")
-            return False
-    
-    def _is_safety_issue(self, error_msg: str) -> bool:
-        """检查是否是安全过滤器相关问题"""
-        safety_keywords = [
-            "finish_reason",
-            "safety",
-            "blocked",
-            "filter",
-            "valid `Part`",
-            "SAFETY"
-        ]
-        error_lower = error_msg.lower()
-        return any(keyword.lower() in error_lower for keyword in safety_keywords)
+            logger.error(f"❌ Gemini修复器分析失败: {str(e)}")
+            # 检查是否是地理位置限制
+            if "location is not supported" in str(e).lower():
+                logger.error("🌍 Gemini API地理位置限制 - 在GitHub Actions中不应出现此错误")
+            raise e
     
     def get_provider_info(self) -> Dict[str, str]:
         return {
-            "name": "Gemini",
+            "name": "Gemini Enhanced",
             "provider": "gemini",
             "model": self.model,
-            "description": "Google Gemini - 多模态AI模型",
-            "safety_failure_count": self.safety_failure_count
+            "description": "Google Gemini with Enhanced Safety Filter Fix",
+            "api_version": getattr(self.fixer, 'api_version', 'unknown') if self.fixer else 'unavailable'
         }
 
 
