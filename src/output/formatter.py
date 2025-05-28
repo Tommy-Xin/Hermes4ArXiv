@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Tuple
 import arxiv
 from jinja2 import Environment, FileSystemLoader, Template
 
-from ..utils.logger import logger
+from utils.logger import logger
 
 
 class OutputFormatter:
