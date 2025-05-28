@@ -32,18 +32,17 @@ class Config:
 
     def __init__(self):
         """初始化配置，从环境变量读取"""
-        # AI API配置 - 只使用DeepSeek（可靠稳定）
+        # DeepSeek AI配置
         self.DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-        self.DEEPSEEK_API_BASE = "https://api.deepseek.com/v1"
         self.DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        
+        # API调用配置
+        self.API_RETRY_TIMES = self._safe_int(os.getenv("API_RETRY_TIMES"), "3")
+        self.API_DELAY = self._safe_int(os.getenv("API_DELAY"), "2")
+        self.API_TIMEOUT = self._safe_int(os.getenv("API_TIMEOUT"), "60")
         
         # 分析配置
         self.ANALYSIS_TYPE = os.getenv("ANALYSIS_TYPE", "comprehensive")
-        
-        # API调用配置
-        self.API_RETRY_TIMES = self._safe_int(os.getenv("API_RETRY_TIMES"), "3")  # API重试次数
-        self.API_DELAY = self._safe_int(os.getenv("API_DELAY"), "2")  # API调用间隔（秒）
-        self.API_TIMEOUT = self._safe_int(os.getenv("API_TIMEOUT"), "60")  # API超时时间（秒）
 
         # 邮件配置
         self.SMTP_SERVER = os.getenv("SMTP_SERVER")
@@ -67,9 +66,6 @@ class Config:
         self.MAX_PAPERS = self._safe_int(os.getenv("MAX_PAPERS"), "50")
         self.SEARCH_DAYS = self._safe_int(os.getenv("SEARCH_DAYS"), "2")
 
-        # AI分析配置
-        self.AI_MODEL = "deepseek-chat"
-
         # 并行处理配置
         self.ENABLE_PARALLEL = os.getenv("ENABLE_PARALLEL", "true").lower() == "true"
         self.MAX_WORKERS = self._safe_int(os.getenv("MAX_WORKERS"), "0")  # 0表示自动计算
@@ -84,13 +80,9 @@ class Config:
 
     def validate(self) -> bool:
         """验证配置是否完整"""
-        # 检查至少有一个AI API密钥
-        ai_apis = [
-            self.DEEPSEEK_API_KEY,
-        ]
-        
-        if not any(ai_apis):
-            print("❌ 至少需要配置一个AI API密钥：DEEPSEEK_API_KEY")
+        # 检查DeepSeek API密钥
+        if not self.DEEPSEEK_API_KEY:
+            print("❌ 未配置DEEPSEEK_API_KEY，无法进行论文分析")
             return False
         
         # 检查邮件配置
@@ -111,13 +103,7 @@ class Config:
             print("❌ 缺少收件人邮箱配置 (EMAIL_TO)")
             return False
 
-        # 显示配置的AI模型
-        configured_ais = []
-        if self.DEEPSEEK_API_KEY:
-            configured_ais.append("DeepSeek")
-        
-        print(f"✅ 配置验证通过！已配置的AI模型: {', '.join(configured_ais)}")
-
+        print(f"✅ 配置验证通过！使用DeepSeek模型: {self.DEEPSEEK_MODEL}")
         return True
 
     def create_directories(self):

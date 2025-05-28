@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-并行论文分析器
-使用多线程并行处理论文分析，显著缩短GitHub Actions运行时间
+并行论文分析器 - 简化版本
+使用多线程并行处理论文分析，专门优化DeepSeek分析
 """
 
 import concurrent.futures
@@ -11,16 +11,15 @@ from typing import List, Tuple, Optional
 
 import arxiv
 
-from ai.analyzers.legacy import AIAnalyzer
 from utils.logger import logger
 
 
 class ParallelPaperAnalyzer:
-    """并行论文分析器"""
+    """并行论文分析器 - 专门为DeepSeek优化"""
 
     def __init__(
         self,
-        ai_analyzer: AIAnalyzer,
+        ai_analyzer,  # DeepSeekAnalyzer实例
         arxiv_client,
         papers_dir,
         max_workers: int = 5,
@@ -30,7 +29,7 @@ class ParallelPaperAnalyzer:
         初始化并行分析器
 
         Args:
-            ai_analyzer: AI分析器实例
+            ai_analyzer: DeepSeek分析器实例
             arxiv_client: ArXiv客户端
             papers_dir: PDF存储目录
             max_workers: 最大并行工作线程数

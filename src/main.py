@@ -44,9 +44,15 @@ class ArxivPaperTracker:
     def _initialize_components(self):
         """初始化各个组件"""
         try:
-            # 初始化AI分析器（只使用DeepSeek）
-            from ai.multi_analyzer import AIAnalyzer
-            self.ai_analyzer = AIAnalyzer(self.config.__dict__)
+            # 初始化DeepSeek分析器
+            from ai.analyzer import DeepSeekAnalyzer
+            self.ai_analyzer = DeepSeekAnalyzer(
+                api_key=self.config.DEEPSEEK_API_KEY,
+                model=self.config.DEEPSEEK_MODEL,
+                timeout=self.config.API_TIMEOUT,
+                retry_times=self.config.API_RETRY_TIMES,
+                delay=self.config.API_DELAY
+            )
             
             # 初始化ArXiv客户端
             self.arxiv_client = ArxivClient(
