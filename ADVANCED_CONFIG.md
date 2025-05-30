@@ -75,7 +75,7 @@ ANALYSIS_TYPE=detailed
 ```bash
 # 基础配置
 DEEPSEEK_API_KEY=sk-your-api-key    # 必需
-DEEPSEEK_MODEL=deepseek-chat        # 可选，默认值
+DEEPSEEK_MODEL=deepseek-chat        # 可选，默认值，这是v3模型，r1模型请使用deepseek-reasoner
 
 # API 调用优化
 API_RETRY_TIMES=3                   # 重试次数
@@ -114,7 +114,7 @@ BATCH_SIZE=20                       # 批处理大小
 ### 邮件配置
 
 ```bash
-# Gmail (推荐)
+# Gmail (推荐，我用的是这个，别的没有试过)
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
