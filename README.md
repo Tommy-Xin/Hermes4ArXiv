@@ -5,7 +5,7 @@
 
 1. **Fork 本仓库** 到您的GitHub账号
 
-2. **设置必需密钥**：进入 Settings → Secrets and variables → Actions，添加：
+2. **设置必需密钥**：进入 Settings → Secrets and variables → Actions，添加（一条条添加）：
    ```
    DEEPSEEK_API_KEY=sk-your-api-key        # 必需：DeepSeek API密钥
    SMTP_USERNAME=your-email@gmail.com      # 必需：发送邮箱
