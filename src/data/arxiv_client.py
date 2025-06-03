@@ -36,13 +36,16 @@ class ArxivClient:
         Returns:
             论文列表，按发布时间倒序排列
         """
+        logger.info(f"ArxivClient: search_days = {self.search_days}")
         # 计算日期范围
-        today = datetime.datetime.now()
-        start_date = today - datetime.timedelta(days=self.search_days)
+        today_utc = datetime.datetime.utcnow()  # 使用 UTC 时间
+        start_date_utc = today_utc - datetime.timedelta(days=self.search_days)
 
         # 格式化ArXiv查询的日期
-        start_date_str = start_date.strftime("%Y%m%d")
-        end_date_str = today.strftime("%Y%m%d")
+        start_date_str = start_date_utc.strftime("%Y%m%d")
+        end_date_str = today_utc.strftime("%Y%m%d")
+        
+        logger.info(f"ArxivClient: Calculated start_date_str = {start_date_str}, end_date_str = {end_date_str}")
 
         # 创建查询字符串
         category_query = " OR ".join([f"cat:{cat}" for cat in self.categories])
