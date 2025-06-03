@@ -58,6 +58,8 @@ class ArxivPaperTracker:
                 categories=self.config.CATEGORIES,
                 max_papers=self.config.MAX_PAPERS,
                 search_days=self.config.SEARCH_DAYS,
+                num_retries=self.config.ARXIV_CLIENT_NUM_RETRIES,
+                delay_seconds=self.config.ARXIV_CLIENT_DELAY_SECONDS
             )
 
             # 初始化输出格式化器

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import arxiv
+import requests # 确保导入 requests 以捕获其异常
 
 from src.utils.logger import logger
 
@@ -16,7 +17,7 @@ from src.utils.logger import logger
 class ArxivClient:
     """ArXiv客户端类"""
 
-    def __init__(self, categories: List[str], max_papers: int = 50, search_days: int = 2):
+    def __init__(self, categories: List[str], max_papers: int = 50, search_days: int = 2, num_retries: int = 3, delay_seconds: float = 3.0):
         """
         初始化ArXiv客户端
 
@@ -24,10 +25,21 @@ class ArxivClient:
             categories: 论文类别列表
             max_papers: 最大论文数量
             search_days: 搜索最近几天的论文
+            num_retries: arxiv.Client 请求的重试次数
+            delay_seconds: arxiv.Client 请求之间的延迟秒数 (用于分页和重试)
         """
         self.categories = categories
         self.max_papers = max_papers
         self.search_days = search_days
+        
+        # 初始化 arxiv.py 库的客户端，并配置重试和延迟
+        # arxiv.Client 会在内部处理分页请求之间的延迟 (delay_seconds)
+        # 以及在请求失败时的重试 (num_retries)
+        logger.info(f"Initializing arxiv.Client with num_retries={num_retries}, delay_seconds={delay_seconds}")
+        self.arxiv_sdk_client = arxiv.Client(
+            num_retries=num_retries,
+            delay_seconds=delay_seconds
+        )
 
     def get_recent_papers(self) -> List[arxiv.Result]:
         """
@@ -36,7 +48,7 @@ class ArxivClient:
         Returns:
             论文列表，按发布时间倒序排列
         """
-        logger.info(f"ArxivClient: search_days = {self.search_days}")
+        logger.info(f"ArxivClient: Initiating get_recent_papers. search_days = {self.search_days}")
         # 计算日期范围
         today_utc = datetime.datetime.utcnow()  # 使用 UTC 时间
         start_date_utc = today_utc - datetime.timedelta(days=self.search_days)
@@ -45,7 +57,7 @@ class ArxivClient:
         start_date_str = start_date_utc.strftime("%Y%m%d")
         end_date_str = today_utc.strftime("%Y%m%d")
         
-        logger.info(f"ArxivClient: Calculated start_date_str = {start_date_str}, end_date_str = {end_date_str}")
+        logger.info(f"ArxivClient: Calculated date range for query: start_date_str = {start_date_str}, end_date_str = {end_date_str}")
 
         # 创建查询字符串
         category_query = " OR ".join([f"cat:{cat}" for cat in self.categories])
@@ -54,7 +66,7 @@ class ArxivClient:
 
         logger.info(f"正在搜索论文，查询条件: {query}")
 
-        # 搜索ArXiv
+        # 准备搜索对象
         search = arxiv.Search(
             query=query,
             max_results=self.max_papers,
@@ -62,10 +74,26 @@ class ArxivClient:
             sort_order=arxiv.SortOrder.Descending,
         )
 
-        results = list(search.results())
-        logger.info(f"找到{len(results)}篇符合条件的论文，将进行AI质量评估")
-        
-        return results
+        # 使用配置好的 arxiv.Client 实例获取结果
+        try:
+            # .results() 是一个生成器，将其转换为列表以获取所有结果
+            # arxiv.Client 的 num_retries 和 delay_seconds 会在这里生效
+            results = list(self.arxiv_sdk_client.results(search))
+            logger.info(f"找到{len(results)}篇符合条件的论文，将进行AI质量评估")
+            return results
+        except requests.exceptions.ConnectionError as e:
+            # 更具体的连接错误捕获
+            logger.error(f"ArXiv连接错误 (Query: {query}): {e}")
+            logger.error("这可能是由于网络问题或ArXiv服务器临时问题。已配置的重试次数可能已用尽。")
+            raise # 重新抛出异常，让上层处理或记录
+        except arxiv.arxiv.ArxivError as e:
+            # 捕获 arxiv 库特有的错误
+            logger.error(f"ArXiv API错误 (Query: {query}): {e}")
+            raise
+        except Exception as e:
+            # 捕获其他所有未知错误
+            logger.error(f"从ArXiv获取论文时发生未知错误 (Query: {query}): {e.__class__.__name__} - {e}")
+            raise
 
     def download_paper(self, paper: arxiv.Result, output_dir: Path) -> Optional[Path]:
         """
@@ -80,18 +108,28 @@ class ArxivClient:
         """
         pdf_path = output_dir / f"{paper.get_short_id().replace('/', '_')}.pdf"
 
-        # 如果已下载则跳过
         if pdf_path.exists():
             logger.info(f"论文已下载: {pdf_path}")
             return pdf_path
 
         try:
             logger.info(f"正在下载: {paper.title}")
+            # 下载操作也应该使用配置好的客户端，但 download_pdf 是 Result 对象的方法，
+            # 它内部应该会复用 Client 的 session (如果设计合理) 或创建新的。
+            # arxiv.py 的 Result.download_pdf() 似乎会创建一个临时的 Client(page_size=1, delay_seconds=0.0, num_retries=0)
+            # 如果要让下载也享受重试，需要更深入的修改或手动下载。
+            # 目前，我们将保持 Result.download_pdf() 的默认行为。
             paper.download_pdf(filename=str(pdf_path))
             logger.info(f"已下载到 {pdf_path}")
             return pdf_path
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"下载论文失败 (ConnectionError) {paper.title}: {e}")
+            return None
+        except arxiv.arxiv.ArxivError as e:
+            logger.error(f"下载论文失败 (ArxivError) {paper.title}: {e}")
+            return None
         except Exception as e:
-            logger.error(f"下载论文失败 {paper.title}: {str(e)}")
+            logger.error(f"下载论文失败 (Unknown Error) {paper.title}: {e.__class__.__name__} - {e}")
             return None
 
     def delete_pdf(self, pdf_path: Path) -> None:
@@ -133,7 +171,6 @@ class ArxivClient:
             title_lower = paper.title.lower()
             summary_lower = paper.summary.lower()
 
-            # 检查标题或摘要中是否包含关键词
             if any(kw in title_lower or kw in summary_lower for kw in keywords_lower):
                 filtered_papers.append(paper)
 

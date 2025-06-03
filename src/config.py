@@ -65,6 +65,8 @@ class Config:
         self.CATEGORIES = [cat.strip() for cat in categories_str.split(",") if cat.strip()]
         self.MAX_PAPERS = self._safe_int(os.getenv("MAX_PAPERS"), "50")
         self.SEARCH_DAYS = self._safe_int(os.getenv("SEARCH_DAYS"), "2")
+        self.ARXIV_CLIENT_NUM_RETRIES = self._safe_int(os.getenv("ARXIV_CLIENT_NUM_RETRIES"), "3")
+        self.ARXIV_CLIENT_DELAY_SECONDS = float(os.getenv("ARXIV_CLIENT_DELAY_SECONDS", "5.0")) # 使用 float，并提供默认值
 
         # 并行处理配置
         self.ENABLE_PARALLEL = os.getenv("ENABLE_PARALLEL", "true").lower() == "true"
