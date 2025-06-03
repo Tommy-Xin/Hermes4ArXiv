@@ -54,10 +54,15 @@ class ArxivClient:
         start_date_utc = today_utc - datetime.timedelta(days=self.search_days)
 
         # 格式化ArXiv查询的日期
-        start_date_str = start_date_utc.strftime("%Y%m%d")
-        end_date_str = today_utc.strftime("%Y%m%d")
+        # start_date_str = start_date_utc.strftime("%Y%m%d")
+        # end_date_str = today_utc.strftime("%Y%m%d")
         
-        logger.info(f"ArxivClient: Calculated date range for query: start_date_str = {start_date_str}, end_date_str = {end_date_str}")
+        # logger.info(f"ArxivClient: Calculated date range for query: start_date_str = {start_date_str}, end_date_str = {end_date_str}")
+        # --- 开始测试A：查询5月最后几天 (YYYYMMDD) ---
+        start_date_str = "20250528"  # Override for Test A
+        end_date_str = "20250531"    # Override for Test A
+        logger.info(f"ArxivClient: TEST_A: Using hardcoded date range: start={start_date_str}, end={end_date_str}")
+        # --- 结束测试A ---
 
         # 创建查询字符串
         category_query = " OR ".join([f"cat:{cat}" for cat in self.categories])
@@ -66,7 +71,7 @@ class ArxivClient:
 
         logger.info(f"正在搜索论文，查询条件: {query}")
 
-        # 准备搜索对象
+        # 搜索ArXiv
         search = arxiv.Search(
             query=query,
             max_results=self.max_papers,
@@ -76,23 +81,14 @@ class ArxivClient:
 
         # 使用配置好的 arxiv.Client 实例获取结果
         try:
-            # .results() 是一个生成器，将其转换为列表以获取所有结果
-            # arxiv.Client 的 num_retries 和 delay_seconds 会在这里生效
             results = list(self.arxiv_sdk_client.results(search))
             logger.info(f"找到{len(results)}篇符合条件的论文，将进行AI质量评估")
             return results
         except requests.exceptions.ConnectionError as e:
-            # 更具体的连接错误捕获
             logger.error(f"ArXiv连接错误 (Query: {query}): {e}")
-            logger.error("这可能是由于网络问题或ArXiv服务器临时问题。已配置的重试次数可能已用尽。")
-            raise # 重新抛出异常，让上层处理或记录
-        except arxiv.arxiv.ArxivError as e:
-            # 捕获 arxiv 库特有的错误
-            logger.error(f"ArXiv API错误 (Query: {query}): {e}")
             raise
         except Exception as e:
-            # 捕获其他所有未知错误
-            logger.error(f"从ArXiv获取论文时发生未知错误 (Query: {query}): {e.__class__.__name__} - {e}")
+            logger.error(f"从ArXiv获取论文时发生未知错误 (Query: {query}): {e}")
             raise
 
     def download_paper(self, paper: arxiv.Result, output_dir: Path) -> Optional[Path]:
