@@ -54,15 +54,9 @@ class ArxivClient:
         start_date_utc = today_utc - datetime.timedelta(days=self.search_days)
 
         # 格式化ArXiv查询的日期
-        # start_date_str = start_date_utc.strftime("%Y%m%d")
-        # end_date_str = today_utc.strftime("%Y%m%d")
-        
-        # logger.info(f"ArxivClient: Calculated date range for query: start_date_str = {start_date_str}, end_date_str = {end_date_str}")
-        # --- 开始测试D：仅查询6月2日 (YYYYMMDD) ---
-        start_date_str = "20250602"  # Override for Test D
-        end_date_str = "20250602"    # Override for Test D
-        logger.info(f"ArxivClient: TEST_D: Using hardcoded date range: start={start_date_str}, end={end_date_str}")
-        # --- 结束测试D ---
+        start_date_str = start_date_utc.strftime("%Y%m%d")
+        end_date_str = today_utc.strftime("%Y%m%d")
+        logger.info(f"ArxivClient: Calculated date range for query: start_date_str = {start_date_str}, end_date_str = {end_date_str}")
 
         # 创建查询字符串
         category_query = " OR ".join([f"cat:{cat}" for cat in self.categories])
