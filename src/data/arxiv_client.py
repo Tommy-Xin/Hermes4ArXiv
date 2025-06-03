@@ -58,11 +58,11 @@ class ArxivClient:
         # end_date_str = today_utc.strftime("%Y%m%d")
         
         # logger.info(f"ArxivClient: Calculated date range for query: start_date_str = {start_date_str}, end_date_str = {end_date_str}")
-        # --- 开始测试A：查询5月最后几天 (YYYYMMDD) ---
-        start_date_str = "20250528"  # Override for Test A
-        end_date_str = "20250531"    # Override for Test A
-        logger.info(f"ArxivClient: TEST_A: Using hardcoded date range: start={start_date_str}, end={end_date_str}")
-        # --- 结束测试A ---
+        # --- 开始测试B：仅查询6月1日 (YYYYMMDD) ---
+        start_date_str = "20250601"  # Override for Test B
+        end_date_str = "20250601"    # Override for Test B
+        logger.info(f"ArxivClient: TEST_B: Using hardcoded date range: start={start_date_str}, end={end_date_str}")
+        # --- 结束测试B ---
 
         # 创建查询字符串
         category_query = " OR ".join([f"cat:{cat}" for cat in self.categories])
