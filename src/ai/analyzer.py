@@ -29,7 +29,7 @@ class DeepSeekAnalyzer:
         if not api_key or len(api_key) < 10:
             raise ValueError("DeepSeek API密钥无效")
     
-    def analyze_paper(self, paper: arxiv.Result, analysis_type: str = "comprehensive") -> Dict[str, Any]:
+    def analyze_paper(self, paper: arxiv.Result) -> Dict[str, Any]:
         """同步分析论文"""
         import openai
         
@@ -40,8 +40,8 @@ class DeepSeekAnalyzer:
             timeout=self.timeout
         )
         
-        system_prompt = PromptManager.get_system_prompt(analysis_type)
-        user_prompt = PromptManager.get_user_prompt(paper, analysis_type)
+        system_prompt = PromptManager.get_system_prompt()
+        user_prompt = PromptManager.get_user_prompt(paper)
         
         for attempt in range(self.retry_times):
             try:

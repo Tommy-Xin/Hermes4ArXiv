@@ -24,8 +24,7 @@ class ParallelPaperAnalyzer:
         arxiv_client,
         papers_dir: Path,
         max_workers: int = 4,
-        batch_size: int = 20,
-        analysis_type: str = "comprehensive"
+        batch_size: int = 20
     ):
         """
         初始化并行分析器
@@ -36,14 +35,12 @@ class ParallelPaperAnalyzer:
             papers_dir: PDF存储目录
             max_workers: 最大并行工作线程数
             batch_size: 批处理大小
-            analysis_type: 分析类型
         """
         self.ai_analyzer = ai_analyzer
         self.arxiv_client = arxiv_client
         self.papers_dir = papers_dir
         self.max_workers = max_workers
         self.batch_size = batch_size
-        self.analysis_type = analysis_type
         
         # 线程安全的计数器
         self._lock = threading.Lock()
@@ -138,7 +135,7 @@ class ParallelPaperAnalyzer:
                 logger.warning(f"[{thread_id}] 下载PDF失败，继续分析: {e}")
 
             # 分析论文
-            analysis = self.ai_analyzer.analyze_paper(paper, self.analysis_type)
+            analysis = self.ai_analyzer.analyze_paper(paper)
             
             # 检查AI分析是否成功
             if analysis is None:

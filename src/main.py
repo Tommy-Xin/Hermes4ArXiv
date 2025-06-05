@@ -107,8 +107,7 @@ class ArxivPaperTracker:
                     arxiv_client=self.arxiv_client,
                     papers_dir=self.config.PAPERS_DIR,
                     max_workers=optimal_workers,
-                    batch_size=min(len(papers), self.config.BATCH_SIZE),
-                    analysis_type=self.config.ANALYSIS_TYPE
+                    batch_size=min(len(papers), self.config.BATCH_SIZE)
                 )
                 
                 # 执行并行分析
@@ -156,7 +155,7 @@ class ArxivPaperTracker:
                         )
 
                         # 分析论文
-                        analysis = self.ai_analyzer.analyze_paper(paper, self.config.ANALYSIS_TYPE)
+                        analysis = self.ai_analyzer.analyze_paper(paper)
                         
                         # 检查AI分析是否成功
                         if analysis is not None:

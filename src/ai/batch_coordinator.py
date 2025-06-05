@@ -109,14 +109,18 @@ class BatchAnalysisCoordinator:
             每篇论文的分析结果列表
         """
         results = []
-        
+        logger.debug(f"Attempting to parse batch_text for {len(papers)} papers. Received batch_text:\\n{batch_text}")
+
         try:
             # 按论文分割文本
-            sections = re.split(r'## 论文 \d+[:：]|### 论文 \d+[:：]|论文\d+[:：]', batch_text)
+            sections = re.split(r'## 论文 \\d+[:：]|### 论文 \\d+[:：]|论文\\d+[:：]', batch_text)
+            logger.debug(f"Primary split resulted in {len(sections)} sections: {sections}")
             
-            if len(sections) < len(papers):
+            if len(sections) < len(papers): # 通常分割后第一项是空或者引言
+                logger.warning(f"Primary split resulted in insufficient sections ({len(sections)}) for {len(papers)} papers. Attempting alternative split.")
                 # 尝试其他分割方式
-                sections = re.split(r'(?=\*\*论文|(?=第\d+名)|(?=排名第\d+))', batch_text)
+                sections = re.split(r'(?=\\*\\*论文|(?=第\\d+名)|(?=排名第\\d+))', batch_text)
+                logger.debug(f"Alternative split resulted in {len(sections)} sections: {sections}")
             
             # 提取评分信息
             scores = self._extract_scores_from_text(batch_text)
@@ -128,12 +132,17 @@ class BatchAnalysisCoordinator:
                 rank = i + 1
                 
                 # 提取对应论文的分析文本
-                if i + 1 < len(sections):
-                    analysis_text = sections[i + 1].strip()
-                elif i < len(sections):
+                # 通常 sections[0] 是引言或空串，实际分析从 sections[1] 开始对应第一篇论文
+                current_section_index = i + 1 
+                if current_section_index < len(sections):
+                    analysis_text = sections[current_section_index].strip()
+                    logger.debug(f"Paper {i+1} ('{paper.title[:30]}...'): Extracted analysis from sections[{current_section_index}]:\\n'{analysis_text[:200]}...'")
+                elif i < len(sections) and len(sections) == len(papers): # 特殊情况：如果分割结果数量刚好等于论文数，可能没有引言
                     analysis_text = sections[i].strip()
+                    logger.warning(f"Paper {i+1} ('{paper.title[:30]}...'): Extracted analysis from sections[{i}] (assuming no preamble). Analysis:\\n'{analysis_text[:200]}...'")
                 else:
-                    analysis_text = f"论文{i+1}的分析暂时无法解析"
+                    analysis_text = f"论文{i+1}的分析暂时无法解析 (section index out of bounds or mismatch)"
+                    logger.warning(f"Paper {i+1} ('{paper.title[:30]}...'): Could not find a corresponding section. Assigning placeholder text. sections_len: {len(sections)}, paper_index: {i}")
                 
                 # 从分析文本中提取评分
                 if i < len(scores):
@@ -160,17 +169,21 @@ class BatchAnalysisCoordinator:
                 })
             
             # 确保有足够的结果
+            if len(results) < len(papers):
+                logger.warning(f"Number of parsed results ({len(results)}) is less than number of papers ({len(papers)}). Appending placeholders for missing papers.")
             while len(results) < len(papers):
+                missing_paper_index = len(results)
+                logger.warning(f"Appending placeholder for paper {missing_paper_index + 1} ('{papers[missing_paper_index].title[:30]}...')")
                 results.append({
-                    'analysis': f"论文{len(results)+1}的分析暂时无法解析",
+                    'analysis': f"论文{missing_paper_index+1}的分析暂时无法解析",
                     'score': 3.0,
-                    'rank': len(results) + 1
+                    'rank': missing_paper_index + 1
                 })
             
             return results[:len(papers)]
             
         except Exception as e:
-            logger.error(f"解析批量分析失败: {e}")
+            logger.error(f"解析批量分析失败: {e}", exc_info=True)
             # 回退方案：平均分配
             return [
                 {
@@ -232,7 +245,7 @@ class BatchAnalysisCoordinator:
         
         for paper in papers:
             try:
-                analysis_result = self.analyzer.analyze_paper(paper, "comprehensive")
+                analysis_result = self.analyzer.analyze_paper(paper)
                 results.append((paper, analysis_result))
             except Exception as e:
                 logger.error(f"单独分析论文失败: {paper.title[:50]}... - {e}")
