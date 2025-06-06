@@ -9,11 +9,29 @@ import re
 import json
 from typing import Dict, List, Any
 
+
 import arxiv
-re
+import tiktoken
+
+logger = logging.getLogger(__name__)
 
 class PromptManager:
     """提示词管理器，所有方法均为静态方法"""
+
+    # 为Tokenizer创建一个类级别的缓存
+    _tokenizer = None
+
+    @classmethod
+    def _get_tokenizer(cls):
+        """获取或创建tiktoken的tokenizer实例"""
+        if cls._tokenizer is None:
+            try:
+                # cl100k_base 是一个广泛兼容的tokenizer, 适用于包括GPT-4在内的多种模型
+                cls._tokenizer = tiktoken.get_encoding("cl100k_base")
+            except Exception as e:
+                logger.error(f"无法加载tiktoken tokenizer: {e}")
+                cls._tokenizer = None
+        return cls._tokenizer
 
     @staticmethod
     def get_system_prompt() -> str:
@@ -165,7 +183,6 @@ class PromptManager:
                 if len(author_names) > 5:
                     authors_str += f" 等{len(author_names)}人"
             except AttributeError as e:
-                logger = logging.getLogger(__name__)
                 logger.warning(f"Abnormal author object structure: {e}")
                 authors_str = "作者信息异常"
         
@@ -189,18 +206,44 @@ class PromptManager:
 
     @staticmethod
     def format_batch_analysis_prompt(papers: list[Dict[str, Any]]) -> str:
-        """格式化深度批量分析的用户提示词"""
+        """
+        格式化深度批量分析的用户提示词。
+        如果提供了全文，则使用全文；否则回退到使用摘要。
+        使用tiktoken进行精确的token截断。
+        """
         paper_texts = []
+        # 为分析内容设定一个安全的最大token数，为其他提示词部分留出余量
+        MAX_CONTENT_TOKENS = 7500 
+        tokenizer = PromptManager._get_tokenizer()
+
         for paper in papers:
+            content_key = "Full Text"
+            content_value = paper.get('full_text')
+            
+            if not content_value:
+                content_key = "Abstract"
+                content_value = paper.get('abstract', 'N/A')
+            
+            # 使用tokenizer进行精确截断
+            if tokenizer:
+                tokens = tokenizer.encode(content_value)
+                if len(tokens) > MAX_CONTENT_TOKENS:
+                    truncated_tokens = tokens[:MAX_CONTENT_TOKENS]
+                    content_value = tokenizer.decode(truncated_tokens, errors='ignore') + "\n... (内容已截断)"
+            else:
+                # 如果tokenizer加载失败，回退到基于字符的截断
+                if len(content_value) > 25000: # 粗略估算
+                    content_value = content_value[:25000] + "\n... (内容已截断)"
+
             paper_texts.append(
 f"""---
 **Paper ID**: {paper['paper_id']}
 **Title**: {paper['title']}
-**Abstract**:
-{paper.get('abstract', 'N/A').replace('{', '{{').replace('}', '}}')}
+**{content_key}**:
+{content_value.replace('{', '{{').replace('}', '}}')}
 ---"""
             )
-        return "Please provide a comprehensive 5-point analysis for each of the following papers, formatted clearly with separators.\n" + "\n".join(paper_texts)
+        return "Please provide a comprehensive 6-point analysis for each of the following papers, formatted clearly with separators. You MUST base your analysis on the FULL TEXT if provided.\n" + "\n".join(paper_texts)
 
     @staticmethod
     def get_stage1_ranking_system_prompt() -> str:

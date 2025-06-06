@@ -57,17 +57,6 @@ MAX_WORKERS=2
 
 在GitHub Secrets中添加或修改以下配置：
 
-```bash
-# 快速分析
-ANALYSIS_TYPE=quick
-
-# 全面分析（默认）
-ANALYSIS_TYPE=comprehensive
-
-# 详细分析
-ANALYSIS_TYPE=detailed
-```
-
 ## 🔧 详细配置选项
 
 ### DeepSeek API 配置

@@ -14,7 +14,6 @@ from src.output.email_sender import EmailSender
 from src.output.formatter import OutputFormatter
 from src.ai.analyzer import DeepSeekAnalyzer
 from src.ai.batch_coordinator import BatchCoordinator
-from src.db.db_manager import DBManager
 from src.utils.logger import logger
 
 
@@ -24,7 +23,6 @@ class ArxivPaperTracker:
     def __init__(self):
         """初始化追踪器"""
         self.config = Config()
-        self.db_manager = None
         self.arxiv_client = None
         self.ai_analyzer = None
         self.batch_coordinator = None
@@ -40,17 +38,15 @@ class ArxivPaperTracker:
     def _initialize_components(self):
         """初始化各个组件"""
         try:
-            self.db_manager = DBManager(self.config.DB_PATH)
+            self.ai_analyzer = DeepSeekAnalyzer(self.config)
             
-            self.ai_analyzer = DeepSeekAnalyzer(self.config, self.db_manager)
-            
-            self.batch_coordinator = BatchCoordinator(self.config, self.db_manager, self.ai_analyzer)
-
             self.arxiv_client = ArxivClient(
                 categories=self.config.CATEGORIES,
                 max_papers=self.config.MAX_PAPERS,
                 search_days=self.config.SEARCH_DAYS
             )
+            
+            self.batch_coordinator = BatchCoordinator(self.config, self.ai_analyzer, self.arxiv_client)
 
             self.output_formatter = OutputFormatter(
                 self.config.TEMPLATES_DIR, 
@@ -62,13 +58,7 @@ class ArxivPaperTracker:
             logger.info("所有组件初始化完成")
 
         except Exception as e:
-            error_msg = f"运行过程中发生严重错误: {e}\n{traceback.format_exc()}"
-            logger.error(error_msg)
-
-            if self.email_sender and self.config.EMAIL_TO:
-                self.email_sender.send_error_notification(
-                    self.config.EMAIL_TO, error_msg
-                )
+            logger.error(f"组件初始化失败: {e}", exc_info=True)
             raise
 
     def run(self):
@@ -77,38 +67,41 @@ class ArxivPaperTracker:
             logger.info("="*50)
             logger.info("开始ArXiv论文追踪和分析")
 
-            # 1. 从ArXiv获取新论文并存入数据库
+            # 1. 从ArXiv获取新论文
             logger.info("Fetching new papers from ArXiv...")
             new_papers = self.arxiv_client.get_recent_papers()
             if not new_papers:
-                logger.info("没有找到新的论文。")
-            else:
-                added_count = self.db_manager.add_papers_from_arxiv_results(new_papers)
-                logger.info(f"成功从ArXiv获取 {len(new_papers)} 篇论文，新加入数据库 {added_count} 篇。")
-
-            # 2. 从数据库获取所有需要分析的论文
-            papers_for_analysis = self.db_manager.get_papers_for_analysis()
-            if not papers_for_analysis:
-                logger.info("数据库中没有需要分析的论文。流程结束。")
-                return
-
-            logger.info(f"从数据库中找到 {len(papers_for_analysis)} 篇待分析的论文。")
-
-            # 3. 使用BatchCoordinator进行分析
-            analyzed_papers = self.batch_coordinator.run_batch_analysis(papers_for_analysis)
-
-            if not analyzed_papers:
-                logger.warning("分析流程未产生任何成功分析的论文。")
-                # Maybe send a notification here if it's unexpected
+                logger.info("没有找到新的论文，流程结束。")
                 return
             
-            logger.info(f"成功分析 {len(analyzed_papers)} 篇论文。")
+            logger.info(f"成功从ArXiv获取 {len(new_papers)} 篇论文。")
 
-            # 4. 生成输出
-            self._generate_outputs(analyzed_papers)
+            # 将arxiv.Result对象和其字典形式一起准备，以供后续使用
+            papers_for_analysis = [(p, p.to_dict()) for p in new_papers]
 
-            # 5. 发送邮件
-            self._send_email_report(analyzed_papers)
+            # 2. 使用BatchCoordinator进行分析
+            # BatchCoordinator现在接收(arxiv.Result, dict)的元组列表
+            analyzed_papers_dicts = self.batch_coordinator.run_batch_analysis(papers_for_analysis)
+
+            if not analyzed_papers_dicts:
+                logger.warning("分析流程未产生任何成功分析的论文。")
+                return
+            
+            logger.info(f"成功分析 {len(analyzed_papers_dicts)} 篇论文。")
+            
+            # 将分析结果与原始ArXiv数据重新组合以进行格式化
+            final_results_for_formatting = []
+            for paper_data in analyzed_papers_dicts:
+                # 从原始论文列表中找到匹配的arxiv.Result对象
+                original_paper = next((p for p in new_papers if p.get_short_id() == paper_data.get('paper_id')), None)
+                if original_paper:
+                    final_results_for_formatting.append((original_paper, paper_data))
+
+            # 3. 生成输出
+            self._generate_outputs(final_results_for_formatting)
+
+            # 4. 发送邮件
+            self._send_email_report(final_results_for_formatting)
 
             logger.info("ArXiv论文追踪和分析流程成功完成。")
             logger.info("="*50)

@@ -12,9 +12,8 @@ from typing import Dict, Any, List
 import openai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from src.config import Config
-from src.db.db_manager import DBManager
-from src.ai.prompts import PromptManager
+from ..config import Config
+from .prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
@@ -25,21 +24,19 @@ class DeepSeekAnalyzer:
     支持完整的两阶段分析流程。
     """
 
-    def __init__(self, config: Config, db_manager: DBManager):
+    def __init__(self, config: Config):
         """
         初始化分析器，从配置中加载设置。
         """
         self.config = config
-        self.db_manager = db_manager
-        self.timeout = self.config.get("API_TIMEOUT", 60)
-        self.model = self.config.get("DEEPSEEK_MODEL", "deepseek-chat")
+        self.timeout = config.API_TIMEOUT
+        self.model = config.DEEPSEEK_MODEL
         
-        api_key = self.config.get("DEEPSEEK_API_KEY")
-        if not api_key:
+        if not config.DEEPSEEK_API_KEY:
             raise ValueError("DEEPSEEK_API_KEY not found in config.")
 
         self.client = openai.OpenAI(
-            api_key=api_key,
+            api_key=config.DEEPSEEK_API_KEY,
             base_url="https://api.deepseek.com/v1"
         )
 
