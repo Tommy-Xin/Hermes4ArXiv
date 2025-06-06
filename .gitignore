@@ -62,7 +62,6 @@ logs/
 
 # Generated files
 src/template_preview.html
-src/conclusion.md
 *.backup
 *.bak
 *.orig

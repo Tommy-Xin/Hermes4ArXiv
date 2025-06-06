@@ -11,11 +11,13 @@ from pathlib import Path
 # 添加当前目录到Python路径
 sys.path.insert(0, str(Path(__file__).parent))
 
-from data.arxiv_client import ArxivClient
-from config import Config
-from output.email_sender import EmailSender
-from output.formatter import OutputFormatter
-from ai.parallel import ParallelPaperAnalyzer
+from src.data.arxiv_client import ArxivClient
+from src.config import Config
+from src.output.email_sender import EmailSender
+from src.output.formatter import OutputFormatter
+from src.ai.analyzer import DeepSeekAnalyzer
+from src.ai.batch_coordinator import BatchCoordinator
+from src.db.db_manager import DBManager
 from src.utils.logger import logger
 
 
@@ -25,222 +27,126 @@ class ArxivPaperTracker:
     def __init__(self):
         """初始化追踪器"""
         self.config = Config()
+        self.db_manager = None
         self.arxiv_client = None
         self.ai_analyzer = None
+        self.batch_coordinator = None
         self.output_formatter = None
         self.email_sender = None
 
-        # 验证配置
         if not self.config.validate():
             raise ValueError("配置验证失败，请检查环境变量设置")
 
-        # 创建必要目录
         self.config.create_directories()
-
-        # 初始化组件
         self._initialize_components()
 
     def _initialize_components(self):
         """初始化各个组件"""
         try:
-            # 初始化DeepSeek分析器
-            from ai.analyzer import DeepSeekAnalyzer
-            self.ai_analyzer = DeepSeekAnalyzer(
-                api_key=self.config.DEEPSEEK_API_KEY,
-                model=self.config.DEEPSEEK_MODEL,
-                timeout=self.config.API_TIMEOUT,
-                retry_times=self.config.API_RETRY_TIMES,
-                delay=self.config.API_DELAY
-            )
+            self.db_manager = DBManager(self.config.DB_PATH)
             
-            # 初始化ArXiv客户端
+            self.ai_analyzer = DeepSeekAnalyzer(self.config, self.db_manager)
+            
+            self.batch_coordinator = BatchCoordinator(self.config, self.db_manager, self.ai_analyzer)
+
             self.arxiv_client = ArxivClient(
                 categories=self.config.CATEGORIES,
                 max_papers=self.config.MAX_PAPERS,
-                search_days=self.config.SEARCH_DAYS,
-                num_retries=self.config.ARXIV_CLIENT_NUM_RETRIES,
-                delay_seconds=self.config.ARXIV_CLIENT_DELAY_SECONDS
+                search_days=self.config.SEARCH_DAYS
             )
 
-            # 初始化输出格式化器
-            self.output_formatter = OutputFormatter(self.config.TEMPLATES_DIR, self.config.GITHUB_REPO_URL)
+            self.output_formatter = OutputFormatter(
+                self.config.TEMPLATES_DIR, 
+                self.config.GITHUB_REPO_URL
+            )
 
-            # 初始化邮件发送器
             self.email_sender = EmailSender.create_from_config(self.config)
 
             logger.info("所有组件初始化完成")
 
         except Exception as e:
-            logger.error(f"组件初始化失败: {e}")
+            error_msg = f"运行过程中发生严重错误: {e}\n{traceback.format_exc()}"
+            logger.error(error_msg)
+
+            if self.email_sender and self.config.EMAIL_TO:
+                self.email_sender.send_error_notification(
+                    self.config.EMAIL_TO, error_msg
+                )
             raise
 
     def run(self):
         """运行论文追踪和分析流程"""
         try:
+            logger.info("="*50)
             logger.info("开始ArXiv论文追踪和分析")
 
-            # 1. 获取最近的论文
-            papers = self.arxiv_client.get_recent_papers()
-
-            if not papers:
-                logger.info("没有找到符合条件的论文")
-                return
-
-            logger.info(f"找到 {len(papers)} 篇论文，开始分析")
-
-            # 2. 分析论文（支持并行和串行两种模式）
-            if self.config.ENABLE_PARALLEL and len(papers) > 1:
-                # 并行分析模式
-                logger.info("使用并行分析模式")
-                
-                # 计算最优工作线程数
-                if self.config.MAX_WORKERS > 0:
-                    optimal_workers = self.config.MAX_WORKERS
-                else:
-                    optimal_workers = ParallelPaperAnalyzer.calculate_optimal_workers(
-                        len(papers), self.config.API_DELAY
-                    )
-                
-                # 创建并行分析器
-                parallel_analyzer = ParallelPaperAnalyzer(
-                    ai_analyzer=self.ai_analyzer,
-                    arxiv_client=self.arxiv_client,
-                    papers_dir=self.config.PAPERS_DIR,
-                    max_workers=optimal_workers,
-                    batch_size=min(len(papers), self.config.BATCH_SIZE),
-                    max_io_workers_factor=int(getattr(self.config, "MAX_IO_WORKERS_FACTOR", "2"))
-                )
-                
-                # 执行并行分析
-                papers_analyses = parallel_analyzer.analyze_papers_parallel(papers)
-                parallel_analyzer.shutdown_io_executor()
-                
-                # 记录性能统计
-                stats = parallel_analyzer.get_performance_stats()
-                logger.info(f"并行分析统计: {stats}")
-                
-                # 检查并行分析的失败情况
-                failed_count = len(papers) - len(papers_analyses)
-                if failed_count > 0:
-                    logger.warning(f"并行分析中有 {failed_count} 篇论文分析失败")
-                    
-                    # 如果所有论文都失败了
-                    if not papers_analyses:
-                        logger.error("所有论文的AI分析都失败了，发送通知邮件")
-                        if self.email_sender and self.config.EMAIL_TO:
-                            self.email_sender.send_ai_analysis_failure_notification(
-                                self.config.EMAIL_TO, len(papers)
-                            )
-                        return
-                    
-                    # 如果失败比例超过50%
-                    failure_rate = failed_count / len(papers)
-                    if failure_rate >= 0.5:
-                        logger.warning(f"AI分析失败率过高 ({failure_rate*100:.1f}%)，发送通知邮件")
-                        if self.email_sender and self.config.EMAIL_TO:
-                            error_msg = f"并行AI分析失败率过高：{failed_count}/{len(papers)} 篇论文分析失败 ({failure_rate*100:.1f}%)"
-                            self.email_sender.send_error_notification(self.config.EMAIL_TO, error_msg)
-
+            # 1. 从ArXiv获取新论文并存入数据库
+            logger.info("Fetching new papers from ArXiv...")
+            new_papers = self.arxiv_client.get_recent_papers()
+            if not new_papers:
+                logger.info("没有找到新的论文。")
             else:
-                # 串行分析模式（原有逻辑）
-                logger.info("使用串行分析模式")
-                papers_analyses = []
-                failed_papers = []
+                added_count = self.db_manager.add_papers_from_arxiv_results(new_papers)
+                logger.info(f"成功从ArXiv获取 {len(new_papers)} 篇论文，新加入数据库 {added_count} 篇。")
 
-                for i, paper in enumerate(papers, 1):
-                    logger.info(f"正在处理论文 {i}/{len(papers)}: {paper.title}")
-
-                    try:
-                        # 下载论文（如果需要）
-                        pdf_path = self.arxiv_client.download_paper(
-                            paper, self.config.PAPERS_DIR
-                        )
-
-                        # 分析论文
-                        analysis = self.ai_analyzer.analyze_paper(paper)
-                        
-                        # 检查AI分析是否成功
-                        if analysis is not None:
-                            papers_analyses.append((paper, analysis))
-                        else:
-                            logger.warning(f"AI分析失败，所有模型都无法处理: {paper.title}")
-                            failed_papers.append(paper)
-
-                        # 清理PDF文件
-                        if pdf_path:
-                            self.arxiv_client.delete_pdf(pdf_path)
-
-                    except Exception as e:
-                        logger.error(f"处理论文失败 {paper.title}: {e}")
-                        failed_papers.append(paper)
-                        # 继续处理下一篇论文
-                        continue
-
-            # 检查是否所有论文都分析失败了
-            if not papers_analyses and len(papers) > 0:
-                logger.error("所有论文的AI分析都失败了，发送通知邮件")
-                # 发送AI分析失败通知邮件
-                if self.email_sender and self.config.EMAIL_TO:
-                    self.email_sender.send_ai_analysis_failure_notification(
-                        self.config.EMAIL_TO, len(papers)
-                    )
+            # 2. 从数据库获取所有需要分析的论文
+            papers_for_analysis = self.db_manager.get_papers_for_analysis()
+            if not papers_for_analysis:
+                logger.info("数据库中没有需要分析的论文。流程结束。")
                 return
 
-            # 如果有部分论文分析失败，记录信息
-            if hasattr(locals(), 'failed_papers') and failed_papers:
-                logger.warning(f"有 {len(failed_papers)} 篇论文AI分析失败，成功分析 {len(papers_analyses)} 篇")
-                # 如果失败比例超过50%，也发送通知
-                failure_rate = len(failed_papers) / len(papers)
-                if failure_rate >= 0.5:
-                    logger.warning(f"AI分析失败率过高 ({failure_rate*100:.1f}%)，发送通知邮件")
-                    if self.email_sender and self.config.EMAIL_TO:
-                        # 使用send_error_notification发送高失败率警告
-                        error_msg = f"AI分析失败率过高：{len(failed_papers)}/{len(papers)} 篇论文分析失败 ({failure_rate*100:.1f}%)\n\n失败论文列表：\n" + "\n".join([f"- {paper.title}" for paper in failed_papers[:10]])
-                        if len(failed_papers) > 10:
-                            error_msg += f"\n... 以及其他 {len(failed_papers) - 10} 篇论文"
-                        self.email_sender.send_error_notification(self.config.EMAIL_TO, error_msg)
+            logger.info(f"从数据库中找到 {len(papers_for_analysis)} 篇待分析的论文。")
 
-            if not papers_analyses:
-                logger.warning("没有成功分析任何论文")
+            # 3. 使用BatchCoordinator进行分析
+            analyzed_papers = self.batch_coordinator.run_batch_analysis(papers_for_analysis)
+
+            if not analyzed_papers:
+                logger.warning("分析流程未产生任何成功分析的论文。")
+                # Maybe send a notification here if it's unexpected
                 return
+            
+            logger.info(f"成功分析 {len(analyzed_papers)} 篇论文。")
 
-            # 3. 生成输出
-            self._generate_outputs(papers_analyses)
+            # 4. 生成输出
+            self._generate_outputs(analyzed_papers)
 
-            # 4. 发送邮件
-            self._send_email_report(papers_analyses)
+            # 5. 发送邮件
+            self._send_email_report(analyzed_papers)
 
-            logger.info("ArXiv论文追踪和分析完成")
+            logger.info("ArXiv论文追踪和分析流程成功完成。")
+            logger.info("="*50)
 
         except Exception as e:
-            error_msg = f"运行过程中发生错误: {e}\n{traceback.format_exc()}"
+            error_msg = f"运行过程中发生严重错误: {e}\n{traceback.format_exc()}"
             logger.error(error_msg)
 
-            # 发送错误通知邮件
             if self.email_sender and self.config.EMAIL_TO:
                 self.email_sender.send_error_notification(
                     self.config.EMAIL_TO, error_msg
                 )
-
             raise
 
     def _generate_outputs(self, papers_analyses):
         """生成各种格式的输出"""
+        if not papers_analyses:
+            logger.info("没有已分析的论文可供生成报告。")
+            return
         try:
-            # 生成Markdown格式并保存到文件
+            logger.info("正在生成输出报告...")
+            # Format and save markdown report to conclusion.md
             markdown_content = self.output_formatter.format_markdown(papers_analyses)
+            with open(self.config.CONCLUSION_FILE, "w", encoding="utf-8") as f:
+                f.write(markdown_content)
 
-            # 追加到conclusion.md文件
-            self.output_formatter.save_to_file(
-                f"\n\n{markdown_content}", self.config.CONCLUSION_FILE, mode="a"
-            )
-
-            # 生成统计信息
-            stats = self.output_formatter.create_summary_stats(papers_analyses)
-            logger.info(f"生成统计信息: {stats}")
+            # Generate and save HTML report
+            html_content = self.output_formatter.format_html_email(papers_analyses)
+            with open(self.config.HTML_REPORT_FILE, "w", encoding="utf-8") as f:
+                f.write(html_content)
+            
+            logger.info(f"报告已生成: {self.config.CONCLUSION_FILE} 和 {self.config.HTML_REPORT_FILE}")
 
         except Exception as e:
-            logger.error(f"生成输出失败: {e}")
+            logger.error(f"生成输出失败: {e}", exc_info=True)
             raise
 
     def _send_email_report(self, papers_analyses):
@@ -248,55 +154,34 @@ class ArxivPaperTracker:
         if not self.email_sender or not self.config.EMAIL_TO:
             logger.info("邮件配置不完整，跳过发送邮件")
             return
+        
+        if not papers_analyses:
+            logger.info("没有成功分析的论文，不发送报告。")
+            return
 
         try:
-            # 生成HTML邮件内容
+            logger.info("正在准备并发送邮件报告...")
             html_content = self.output_formatter.format_html_email(papers_analyses)
-
-            # 发送邮件
-            success = self.email_sender.send_paper_analysis_report(
-                self.config.EMAIL_TO, html_content, len(papers_analyses)
+            subject = self.output_formatter.get_email_subject()
+            
+            self.email_sender.send_email(
+                to_email=self.config.EMAIL_TO,
+                subject=subject,
+                html_content=html_content
             )
-
-            if success:
-                logger.info("邮件报告发送成功")
-            else:
-                logger.error("邮件报告发送失败")
-
+            logger.info(f"邮件报告已成功发送至 {', '.join(self.config.EMAIL_TO)}")
         except Exception as e:
-            logger.error(f"发送邮件报告失败: {e}")
-
-    def test_components(self):
-        """测试各个组件的连接"""
-        logger.info("开始测试组件连接")
-
-        # 测试邮件连接
-        if self.email_sender:
-            self.email_sender.test_connection()
-
-        # 测试ArXiv连接
-        try:
-            test_papers = self.arxiv_client.get_recent_papers()
-            logger.info(f"ArXiv连接测试成功，找到 {len(test_papers)} 篇论文")
-        except Exception as e:
-            logger.error(f"ArXiv连接测试失败: {e}")
-
-        logger.info("组件测试完成")
-
+            logger.error(f"发送邮件报告失败: {e}", exc_info=True)
+            raise
 
 def main():
-    """主函数"""
+    """主函数入口"""
     try:
-        # 创建追踪器实例
         tracker = ArxivPaperTracker()
-
-        # 运行追踪和分析
         tracker.run()
-
     except Exception as e:
-        logger.error(f"程序运行失败: {e}")
+        logger.critical(f"应用启动或运行过程中发生致命错误: {e}", exc_info=True)
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

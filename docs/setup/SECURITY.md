@@ -3,6 +3,7 @@
 ## 密钥安全保障
 
 ### GitHub Secrets 安全机制
+你需要在 GitHub Secrets 中配置一切环境变量。
 本项目使用 GitHub Secrets 来保护您的敏感信息，提供企业级安全保障：
 
 1. **加密存储** - 所有 Secrets 在 GitHub 服务器上使用 AES-256 加密存储

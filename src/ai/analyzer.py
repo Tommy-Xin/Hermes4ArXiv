@@ -1,211 +1,152 @@
 #!/usr/bin/env python3
 """
-DeepSeek AI分析器 - 简洁版本
-专注于稳定可靠的单AI分析
+AI 分析器模块
+使用 DeepSeek API 进行所有分析。
 """
 
-import asyncio
 import logging
 import time
-from typing import Dict, Any
-import arxiv
+import json
+from typing import Dict, Any, List
 
-from .prompts import PromptManager
+import openai
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+from src.config import Config
+from src.db.db_manager import DBManager
+from src.ai.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
 
 class DeepSeekAnalyzer:
-    """DeepSeek AI分析器 - 稳定可靠的论文分析"""
-    
-    def __init__(self, api_key: str, model: str = "deepseek-chat", timeout: int = 60, retry_times: int = 3, delay: int = 2):
-        self.api_key = api_key
-        self.model = model
-        self.base_url = "https://api.deepseek.com/v1"
-        self.timeout = timeout
-        self.retry_times = retry_times
-        self.delay = delay
+    """
+    使用 DeepSeek API 进行论文分析的主分析器。
+    支持完整的两阶段分析流程。
+    """
+
+    def __init__(self, config: Config, db_manager: DBManager):
+        """
+        初始化分析器，从配置中加载设置。
+        """
+        self.config = config
+        self.db_manager = db_manager
+        self.timeout = self.config.get("API_TIMEOUT", 60)
+        self.model = self.config.get("DEEPSEEK_MODEL", "deepseek-chat")
         
-        if not api_key or len(api_key) < 10:
-            raise ValueError("DeepSeek API密钥无效")
-    
-    def analyze_paper(self, paper: arxiv.Result) -> Dict[str, Any]:
-        """同步分析论文"""
-        import openai
+        api_key = self.config.get("DEEPSEEK_API_KEY")
+        if not api_key:
+            raise ValueError("DEEPSEEK_API_KEY not found in config.")
+
+        self.client = openai.OpenAI(
+            api_key=api_key,
+            base_url="https://api.deepseek.com/v1"
+        )
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    def rank_papers_in_batch(self, papers: list[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        对一小批论文进行强制排名和评分 (Stage 1).
+        返回一个包含评分结果的列表。
+        """
+        logger.info(f"Executing Stage 1: Ranking a batch of {len(papers)} papers using DeepSeek.")
+        if not papers:
+            return []
+
+        response_text = ""
+        try:
+            system_prompt = PromptManager.get_stage1_ranking_system_prompt()
+            user_prompt = PromptManager.format_stage1_ranking_prompt(papers)
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+                max_tokens=2048,
+                temperature=0.2,
+                response_format={"type": "json_object"},
+                timeout=self.timeout
+            )
+            
+            response_text = response.choices[0].message.content
+            logger.debug(f"Raw Stage 1 ranking response from AI: {response_text}")
+            
+            parsed_json = json.loads(response_text)
+            
+            if isinstance(parsed_json, dict):
+                ranking_list = next((v for v in parsed_json.values() if isinstance(v, list)), None)
+                if ranking_list is None:
+                    logger.error("AI returned a JSON object for ranking, but no list was found inside.")
+                    return []
+            elif isinstance(parsed_json, list):
+                ranking_list = parsed_json
+            else:
+                logger.error(f"AI ranking response was not a JSON list or a dict containing a list. Type: {type(parsed_json)}")
+                return []
+
+            if not all('paper_id' in item and 'score' in item for item in ranking_list):
+                logger.error("AI ranking response list has malformed items.")
+                return []
+                
+            return ranking_list
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to decode JSON from AI ranking response: {e}\nProblematic text: {response_text}")
+            return []
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during paper ranking: {e}", exc_info=True)
+            return []
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    def analyze_papers_batch(self, papers: list[Dict[str, Any]]) -> str:
+        """
+        对一批论文进行深入的批量分析 (Stage 2).
+        返回一个包含所有分析的长字符串。
+        """
+        logger.info(f"Executing Stage 2: Performing deep analysis on a batch of {len(papers)} papers using DeepSeek.")
+        if not papers:
+            return ""
+
+        system_prompt = PromptManager.get_system_prompt()
+        user_prompt = PromptManager.format_batch_analysis_prompt(papers)
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            max_tokens=8000,
+            temperature=0.5,
+            stream=False,
+            timeout=self.timeout * 2
+        )
+        analysis_text = response.choices[0].message.content
+        logger.info(f"Successfully completed deep analysis for {len(papers)} papers.")
+        return analysis_text
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    def analyze_paper(self, paper: Dict[str, Any]) -> str:
+        """
+        对单篇论文进行深入分析 (用于后备或单次运行).
+        返回包含分析结果的字符串。
+        """
+        logger.info(f"Performing single paper analysis for: {paper.get('title', 'N/A')} using DeepSeek.")
+        system_prompt = PromptManager.get_system_prompt()
         
-        # 使用OpenAI兼容的API
-        client = openai.OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url,
+        # 直接从字典构建Prompt，以适应数据库记录的格式
+        user_prompt = f"""请分析以下ArXiv论文：
+📄 **论文标题**：{paper.get('title', '未知标题')}
+👥 **作者信息**：{paper.get('authors', '未知作者')}
+🏷️ **研究领域**：{paper.get('categories', '未知领域')}
+📅 **发布时间**：{paper.get('published_date', '未知日期')}
+📝 **论文摘要**：{paper.get('abstract', '摘要不可用')}
+🔗 **论文链接**：https://arxiv.org/abs/{paper.get('paper_id', '')}
+---
+请基于以上信息，按照系统提示的结构进行深度分析。"""
+        
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            max_tokens=2000,
+            temperature=0.7,
             timeout=self.timeout
         )
         
-        system_prompt = PromptManager.get_system_prompt()
-        user_prompt = PromptManager.get_user_prompt(paper)
-        
-        for attempt in range(self.retry_times):
-            try:
-                logger.info(f"DeepSeek分析论文: {paper.title[:50]}... (尝试 {attempt + 1}/{self.retry_times})")
-                
-                response = client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0.7,
-                    max_tokens=1500,
-                    timeout=self.timeout
-                )
-                
-                analysis = response.choices[0].message.content
-                logger.info(f"✅ DeepSeek分析完成: {paper.title[:50]}...")
-                
-                # 添加延迟避免API限制
-                time.sleep(self.delay)
-                
-                return {
-                    'analysis': analysis,
-                    'provider': 'deepseek',
-                    'model': self.model,
-                    'timestamp': time.time(),
-                    'html_analysis': PromptManager.format_analysis_for_html(analysis)
-                }
-                
-            except Exception as e:
-                error_msg = str(e)
-                logger.warning(f"❌ DeepSeek分析失败 (尝试 {attempt + 1}): {error_msg}")
-                
-                if attempt < self.retry_times - 1:
-                    # 网络错误时使用指数退避
-                    if "timeout" in error_msg.lower() or "connection" in error_msg.lower():
-                        wait_time = self.delay * (attempt + 2) * 2
-                        logger.info(f"网络错误，等待 {wait_time} 秒后重试...")
-                        time.sleep(wait_time)
-                    else:
-                        time.sleep(self.delay * (attempt + 1))
-                
-                if attempt == self.retry_times - 1:
-                    raise e
-
-    def analyze_papers_batch(self, papers: list, batch_size: int = 4) -> Dict[str, Any]:
-        """
-        批量比较分析论文
-        
-        Args:
-            papers: 论文列表
-            batch_size: 批次大小，默认4篇
-            
-        Returns:
-            批量分析结果字典
-        """
-        import openai
-        
-        if len(papers) < 2:
-            # 如果论文数量不足，回退到单独分析
-            logger.warning("论文数量不足，回退到单独分析模式")
-            return None
-        
-        # 准备论文信息
-        papers_info = []
-        for paper in papers[:batch_size]:  # 限制批次大小
-            # 提取作者信息
-            authors_str = '未知'
-            if hasattr(paper, 'authors') and paper.authors:
-                try:
-                    author_names = [author.name for author in paper.authors]
-                    authors_str = ', '.join(author_names[:3])  # 最多显示3个作者
-                    if len(author_names) > 3:
-                        authors_str += f" 等{len(author_names)}人"
-                except AttributeError:
-                    try:
-                        author_names = [str(author) for author in paper.authors[:3]]
-                        authors_str = ', '.join(author_names)
-                    except:
-                        authors_str = f'作者信息异常 ({len(paper.authors)} 位作者)'
-            
-            # 格式化发布时间
-            published_date = '未知'
-            if hasattr(paper, 'published') and paper.published:
-                try:
-                    published_date = paper.published.strftime('%Y年%m月%d日')
-                except:
-                    published_date = str(paper.published)
-            
-            # 处理摘要长度
-            summary = paper.summary.strip()
-            if len(summary) > 800:  # 批量分析时摘要更短
-                summary = summary[:800] + "..."
-            
-            papers_info.append({
-                'title': paper.title,
-                'authors': authors_str,
-                'categories': ', '.join(paper.categories),
-                'published': published_date,
-                'summary': summary,
-                'url': paper.entry_id
-            })
-        
-        # 使用OpenAI兼容的API
-        client = openai.OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url,
-            timeout=self.timeout * 2  # 批量分析需要更长时间
-        )
-        
-        system_prompt = PromptManager.get_batch_comparison_system_prompt()
-        user_prompt = PromptManager.get_batch_comparison_user_prompt(papers_info)
-        
-        for attempt in range(self.retry_times):
-            try:
-                logger.info(f"DeepSeek批量分析 {len(papers_info)} 篇论文 (尝试 {attempt + 1}/{self.retry_times})")
-                
-                response = client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0.3,  # 更低的温度确保一致性
-                    max_tokens=10000,  # 增加Token上限以容纳完整的批量分析，避免内容被截断
-                    timeout=self.timeout * 2
-                )
-                
-                batch_analysis = response.choices[0].message.content
-                logger.info(f"✅ DeepSeek批量分析完成: {len(papers_info)} 篇论文")
-                
-                # 延迟避免API限制
-                time.sleep(self.delay * 2)
-                
-                return {
-                    'batch_analysis': batch_analysis,
-                    'papers_count': len(papers_info),
-                    'provider': 'deepseek',
-                    'model': self.model,
-                    'timestamp': time.time(),
-                    'analysis_type': 'batch_comparison'
-                }
-                
-            except Exception as e:
-                error_msg = str(e)
-                logger.warning(f"❌ DeepSeek批量分析失败 (尝试 {attempt + 1}): {error_msg}")
-                
-                if attempt < self.retry_times - 1:
-                    if "timeout" in error_msg.lower() or "connection" in error_msg.lower():
-                        wait_time = self.delay * (attempt + 2) * 3
-                        logger.info(f"网络错误，等待 {wait_time} 秒后重试...")
-                        time.sleep(wait_time)
-                    else:
-                        time.sleep(self.delay * (attempt + 2))
-                
-                if attempt == self.retry_times - 1:
-                    logger.error(f"批量分析最终失败，回退到单独分析模式")
-                    return None
-
-    def get_info(self) -> Dict[str, str]:
-        """获取分析器信息"""
-        return {
-            "name": "DeepSeek",
-            "model": self.model,
-            "description": "DeepSeek - 高性价比稳定AI模型"
-        } 
+        return response.choices[0].message.content 

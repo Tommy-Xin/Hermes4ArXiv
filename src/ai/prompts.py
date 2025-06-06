@@ -4,24 +4,24 @@ AI提示词管理模块
 集中管理各种AI分析任务的提示词
 """
 
-from typing import Dict, List
-import arxiv
 import logging
+import re
+import json
+from typing import Dict, List, Any
 
+import arxiv
+re
 
 class PromptManager:
-    """提示词管理器"""
-    
+    """提示词管理器，所有方法均为静态方法"""
+
     @staticmethod
     def get_system_prompt() -> str:
         """
         获取系统提示词 (始终返回综合分析版本)
-        
-        Returns:
-            系统提示词
         """
         return PromptManager._get_comprehensive_system_prompt()
-    
+
     @staticmethod
     def _get_comprehensive_system_prompt() -> str:
         """获取综合分析系统提示词"""
@@ -77,28 +77,24 @@ class PromptManager:
 - **📝 评分条件**：明显低于发表标准或存在serious issues
 
 **🎯 严格评分执行准则**：
-
 1. **强制分布要求**：
    - 5星：<1%（只有真正革命性的工作）
    - 4星：<5%（需要明确的重要贡献）
    - 3星：35-45%（大多数合格研究）
    - 2星：35-45%（一般质量工作）
    - 1星：10-15%（存在明显问题）
-
 2. **评分铁律**：
    - **拒绝温和主义**：不要因为"不想打击作者"而给虚高分数
    - **坚持客观标准**：基于技术贡献、实验质量、创新程度严格评分
    - **强制区分度**：必须在不同质量论文间体现明显差异
    - **突破性要求**：4星以上必须有明确且substantial的技术突破
    - **常规工作限制**：普通incremental work最高3星，常规改进2-3星
-
 3. **评分参考对照**：
    - **5星参考**：GPT、Transformer、ResNet等历史性突破论文
    - **4星参考**：BERT、Vision Transformer等重要进展论文
    - **3星参考**：现有方法的合理改进和扩展
    - **2星参考**：创新有限的常规工作
    - **1星参考**：实验不充分或方法有明显缺陷的工作
-
 4. **严格把关要点**：
    - 简单的超参数调优或架构微调 → 最多2星
    - 缺乏充分基线对比的实验 → 降1星
@@ -115,34 +111,28 @@ class PromptManager:
 - 创新不足就是不足，不要迁就
 
 **分析任务**：请按照以下六个维度进行严格分析：
-
 **1. ⭐ 质量评估**
 - 严格按照上述标准给出1-5星评分（可用0.5星精度）
 - 明确说明给出此评分的严格理由和对照标准
 - 评估创新程度（revolutionary/significant/incremental/marginal/none）
 - 评估技术严谨性（exceptional/good/adequate/poor/problematic）
 - 评估实用价值（high/medium/low/questionable/none）
-
 **2. 🎯 核心贡献**
 - 精准识别论文的主要创新点和技术贡献
 - 与现有工作的差异化分析和优势评估
 - 技术贡献的新颖性、重要性和深度评价
-
 **3. 🔧 技术方法**
 - 分析核心算法、架构或方法论的先进性
 - 评估技术路线的合理性、创新性和实现难度
 - 指出关键技术细节和与现有方法的区别
-
 **4. 🧪 实验验证**
 - 评估实验设计的科学性和充分性
 - 分析数据集选择、基线对比、评估指标的合理性
 - 解读实验结果的说服力和可信度
-
 **5. 💡 影响意义**
 - 客观评估对学术界和工业界的潜在影响
 - 分析实际应用的可行性和价值
 - 预测可能的后续研究方向和影响范围
-
 **6. 🔮 局限展望**
 - 客观指出研究的主要局限性和不足
 - 提出具体的改进方向和扩展建议
@@ -166,361 +156,153 @@ class PromptManager:
 
     @staticmethod
     def get_user_prompt(paper: arxiv.Result) -> str:
-        """
-        获取用户提示词
-        
-        Args:
-            paper: 论文对象
-        
-        Returns:
-            用户提示词
-        """
-        # 提取作者信息 - 优先使用正常路径，异常时记录警告
+        """获取单个论文分析的用户提示词"""
         authors_str = '未知'
         if hasattr(paper, 'authors') and paper.authors:
             try:
-                # 正常情况：直接使用 author.name
                 author_names = [author.name for author in paper.authors]
-                authors_str = ', '.join(author_names[:5])  # 最多显示5个作者
+                authors_str = ', '.join(author_names[:5])
                 if len(author_names) > 5:
                     authors_str += f" 等{len(author_names)}人"
             except AttributeError as e:
-                # 异常情况：Author对象结构不正常
                 logger = logging.getLogger(__name__)
-                logger.warning(f"⚠️ 检测到异常的Author对象结构: {e}")
-                try:
-                    # 备用方案：str()转换
-                    author_names = [str(author) for author in paper.authors[:5]]
-                    authors_str = ', '.join(author_names)
-                    if len(paper.authors) > 5:
-                        authors_str += f" 等{len(paper.authors)}人"
-                    logger.info(f"✅ 使用str()转换成功获取作者信息")
-                except Exception as e2:
-                    logger.error(f"❌ 无法获取作者信息: {e2}")
-                    authors_str = f'作者信息异常 ({len(paper.authors)} 位作者)'
+                logger.warning(f"Abnormal author object structure: {e}")
+                authors_str = "作者信息异常"
         
-        # 格式化发布时间
         published_date = '未知'
         if hasattr(paper, 'published') and paper.published:
-            try:
-                published_date = paper.published.strftime('%Y年%m月%d日')
-            except (AttributeError, ValueError) as e:
-                logger = logging.getLogger(__name__)
-                logger.warning(f"⚠️ 发布时间格式异常: {e}")
-                published_date = str(paper.published)
-        elif hasattr(paper, 'published'):
-            # published字段存在但为None（不应该发生）
-            logger = logging.getLogger(__name__)
-            logger.warning("⚠️ 检测到published字段为None")
-        
-        # 处理摘要长度
-        summary = paper.summary.strip()
-        if len(summary) > 1500:  # 如果摘要太长，截取前1500字符
+            published_date = paper.published.strftime('%Y年%m月%d日')
+
+        summary = paper.summary.strip().replace("\n", " ")
+        if len(summary) > 1500:
             summary = summary[:1500] + "..."
-        
-        # 基础提示词模板
-        base_prompt = f"""请分析以下ArXiv论文：
 
+        return f"""请分析以下ArXiv论文：
 📄 **论文标题**：{paper.title}
-
 👥 **作者信息**：{authors_str}
-
 🏷️ **研究领域**：{', '.join(paper.categories)}
-
 📅 **发布时间**：{published_date}
-
-📝 **论文摘要**：
-{summary}
-
+📝 **论文摘要**：{summary}
 🔗 **论文链接**：{paper.entry_id}
-
 ---
-
-请基于以上信息，按照系统提示的结构进行深度分析。注意：
-- 重点关注技术创新和实际应用价值
-- 结合当前AI/ML领域的发展趋势
-- 提供专业而易懂的分析见解"""
-
-        # 添加强制输出格式要求
-        base_prompt += """
-
-🚨 **严重警告：输出格式强制要求**
-1. **必须严格按照系统提示的维度结构输出**，不得遗漏任何维度
-2. **第1个维度必须明确给出1-5星评分**（如：⭐ 质量评估：3.5星）
-3. **每个维度必须以正确的emoji开头**，严格按照顺序
-4. **评分必须基于学术标准**，并说明参考依据
-5. **禁止省略任何维度**，即使信息不足也要说明
-6. **禁止改变输出结构**，必须完全遵循系统提示要求
-
-**如果不按照以上格式输出，将被视为无效响应！**"""
-        
-        return base_prompt
+请基于以上信息，按照系统提示的结构进行深度分析。"""
 
     @staticmethod
-    def get_fallback_prompt() -> str:
-        """获取降级提示词（当API调用失败时使用）"""
-        return """抱歉，AI分析服务暂时不可用。以下是基于论文标题和摘要的基础信息：
-
-**论文概述**：这是一篇关于{categories}领域的研究论文，由{authors}等研究者发表。
-
-**研究内容**：论文主要探讨了{title}相关的技术问题。
-
-**技术价值**：该研究在相关领域具有一定的学术价值和应用潜力。
-
-**建议**：建议读者查阅原文获取详细的技术内容和实验结果。
-
----
-*注：本分析为自动生成的基础信息，详细技术分析请参考原文。*"""
+    def format_batch_analysis_prompt(papers: list[Dict[str, Any]]) -> str:
+        """格式化深度批量分析的用户提示词"""
+        paper_texts = []
+        for paper in papers:
+            paper_texts.append(
+f"""---
+**Paper ID**: {paper['paper_id']}
+**Title**: {paper['title']}
+**Abstract**:
+{paper.get('abstract', 'N/A').replace('{', '{{').replace('}', '}}')}
+---"""
+            )
+        return "Please provide a comprehensive 5-point analysis for each of the following papers, formatted clearly with separators.\n" + "\n".join(paper_texts)
 
     @staticmethod
-    def get_error_analysis(error_msg: str) -> str:
-        """获取错误分析信息"""
-        return f"""**分析状态**：AI分析暂时不可用
+    def get_stage1_ranking_system_prompt() -> str:
+        """获取第一阶段强制排名系统提示词"""
+        return """You are an expert AI research assistant. Your task is to perform a relative quality ranking on a small batch of academic papers.
+You will be given a list of papers, each with a title and an abstract.
+You MUST follow these rules strictly:
+1.  **Relative Ranking**: Do not judge each paper in isolation. You MUST compare them against each other to determine their relative novelty, significance, and potential impact.
+2.  **Forced Distribution Scoring**: You MUST assign a score to each paper based on its rank within the current batch. The scores must follow this forced distribution:
+    -   **Top 10% (e.g., 1 paper in a batch of 10)**: Assign a score between 4.5 and 5.0. These are groundbreaking papers.
+    -   **Next 20% (e.g., 2 papers in a batch of 10)**: Assign a score between 3.5 and 4.4. These are significant and interesting papers.
+    -   **Middle 40% (e.g., 4 papers in a batch of 10)**: Assign a score between 2.5 and 3.4. These are solid, incremental contributions.
+    -   **Bottom 30% (e.g., 3 papers in a batch of 10)**: Assign a score between 1.0 and 2.4. These are minor, less impactful, or flawed papers.
+3.  **JSON Output**: You MUST return your analysis as a single JSON object. This object should be a list where each element corresponds to one paper and contains the paper's ID, its assigned score, and a brief justification for the score. Do not include any text outside of the JSON object.
 
-**错误信息**：{error_msg}
+Example for a batch of 10 papers:
+[
+  {"paper_id": "2401.0001", "score": 4.8, "justification": "Breakthrough approach to a long-standing problem."},
+  {"paper_id": "2401.0005", "score": 4.1, "justification": "Significant improvement over SOTA with strong results."},
+  {"paper_id": "2401.0008", "score": 3.9, "justification": "Interesting new application of an existing method."},
+  {"paper_id": "2401.0002", "score": 3.2, "justification": "Solid incremental work with decent experiments."},
+  {"paper_id": "2401.0004", "score": 3.1, "justification": "An okay contribution, but lacks novelty."},
+  {"paper_id": "2401.0007", "score": 2.8, "justification": "Incremental work, limited validation."},
+  {"paper_id": "2401.0009", "score": 2.5, "justification": "Standard methodology, predictable results."},
+  {"paper_id": "2401.0003", "score": 2.1, "justification": "Minor contribution with several limitations."},
+  {"paper_id": "2401.0006", "score": 1.8, "justification": "Flawed methodology, results are not convincing."},
+  {"paper_id": "2401.0010", "score": 1.5, "justification": "Very limited novelty and weak supporting evidence."}
+]
+"""
 
-**建议操作**：
-1. 检查网络连接状态
-2. 验证API密钥配置
-3. 确认API服务可用性
-4. 稍后重试分析
-
-**论文价值**：尽管自动分析不可用，该论文仍值得关注。建议：
-- 查阅论文原文了解详细内容
-- 关注论文的引用情况和后续发展
-- 结合相关领域的最新进展进行理解
-
----
-*系统将在下次运行时重新尝试分析此论文。*"""
+    @staticmethod
+    def format_stage1_ranking_prompt(papers: list[Dict[str, Any]]) -> str:
+        """格式化第一阶段排名的用户提示词"""
+        paper_texts = []
+        for paper in papers:
+            # 使用 json.dumps 来安全地处理摘要和标题中的特殊字符（如引号）
+            abstract = json.dumps(paper.get('abstract', '').replace("\n", " "))
+            title = json.dumps(paper.get('title', ''))
+            paper_texts.append(
+f"""    {{
+        "paper_id": "{paper.get('paper_id', 'N/A')}",
+        "title": {title},
+        "abstract": {abstract}
+    }}"""
+            )
+        return f"Please rank the following papers based on the rules provided in the system prompt. Here is the list of papers:\n[\n{',\\n'.join(paper_texts)}\n]"
 
     @staticmethod
     def format_analysis_for_html(analysis_text: str) -> str:
-        """
-        将分析文本格式化为HTML
+        """将AI分析结果格式化为HTML"""
+        if not isinstance(analysis_text, str) or not analysis_text.strip():
+            return "<p>AI analysis not available.</p>"
+
+        sections = {
+            "⭐ 质量评估": "star",
+            "🎯 核心贡献": "bullseye",
+            "🔧 技术方法": "wrench",
+            "🧪 实验验证": "beaker",
+            "💡 影响意义": "lightbulb",
+            "🔮 局限展望": "crystal-ball"
+        }
         
-        Args:
-            analysis_text: 原始分析文本
+        html_content = ""
         
-        Returns:
-            格式化的HTML文本
-        """
-        if not analysis_text:
-            return ""
+        # 使用正则表达式按维度分割，同时保留分隔符
+        parts = re.split(r'(⭐|🎯|🔧|🧪|💡|🔮)', analysis_text)
         
-        # 分割成段落
-        lines = analysis_text.strip().split('\n')
-        html_sections = []
+        # parts[0]是第一个分隔符之前的内容（通常为空），之后是 (分隔符, 内容) 对
+        content_parts = [parts[i] + parts[i+1] for i in range(1, len(parts), 2)]
+
+        for part in content_parts:
+            for title, icon in sections.items():
+                if part.strip().startswith(title):
+                    # 移除标题本身和前后的空格
+                    content = part.replace(title, "", 1).strip()
+                    # 格式化内容
+                    formatted_content = PromptManager._format_text_content(content)
+                    html_content += f"""
+                    <div class="analysis-dimension">
+                        <div class="dimension-title">
+                            <i class="fas fa-{icon}"></i>
+                            <h4>{title.split(' ')[1]}</h4>
+                        </div>
+                        <p>{formatted_content}</p>
+                    </div>
+                    """
+                    break # 匹配到就处理下一个part
         
-        current_section = None
-        current_content = []
-        
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            
-            # 检查是否是新的分析维度
-            if any(marker in line for marker in ['🎯', '🔧', '🧪', '💡', '🔮', '**1.', '**2.', '**3.', '**4.', '**5.']):
-                # 保存上一个section
-                if current_section and current_content:
-                    html_sections.append(PromptManager._create_analysis_section(current_section, current_content))
-                
-                # 开始新的section
-                current_section = line
-                current_content = []
-            else:
-                # 添加到当前section的内容
-                current_content.append(line)
-        
-        # 添加最后一个section
-        if current_section and current_content:
-            html_sections.append(PromptManager._create_analysis_section(current_section, current_content))
-        
-        return '\n'.join(html_sections)
-    
-    @staticmethod
-    def _create_analysis_section(title: str, content: List[str]) -> str:
-        """创建分析section的HTML"""
-        # 提取emoji和标题
-        if '🎯' in title:
-            emoji = '🎯'
-            section_title = '1. 核心贡献'
-        elif '🔧' in title:
-            emoji = '🔧'
-            section_title = '2. 技术方法'
-        elif '🧪' in title:
-            emoji = '🧪'
-            section_title = '3. 实验验证'
-        elif '💡' in title:
-            emoji = '💡'
-            section_title = '4. 影响意义'
-        elif '🔮' in title:
-            emoji = '🔮'
-            section_title = '5. 局限展望'
-        else:
-            # 尝试从标题中提取
-            emoji = '📝'
-            section_title = title.replace('*', '').strip()
-        
-        # 合并内容
-        content_text = ' '.join(content).strip()
-        
-        # 处理文本格式
-        content_text = PromptManager._format_text_content(content_text)
-        
-        return f'''<div class="analysis-section">
-    <div class="analysis-title">
-        <span>{emoji}</span>
-        {section_title}
-    </div>
-    <div class="analysis-content">
-        <p>{content_text}</p>
-    </div>
-</div>'''
-    
+        if not html_content:
+            # 如果分割失败，提供原始文本作为后备
+            return f"<p>{analysis_text.replace('<', '&lt;').replace('>', '&gt;')}</p>"
+
+        return f'<div class="ai-analysis-container">{html_content}</div>'
+
     @staticmethod
     def _format_text_content(text: str) -> str:
-        """格式化文本内容，添加HTML标记"""
-        if not text:
-            return ""
-        
-        # 处理粗体标记
-        text = text.replace('**', '<strong>').replace('**', '</strong>')
-        
-        # 处理斜体标记
-        text = text.replace('*', '<em>').replace('*', '</em>')
-        
-        # 处理代码标记
-        text = text.replace('`', '<code>').replace('`', '</code>')
-        
-        # 处理数字和百分比的突出显示
-        import re
-        text = re.sub(r'(\d+\.?\d*%)', r'<strong>\1</strong>', text)
-        text = re.sub(r'(\d+\.?\d*倍)', r'<strong>\1</strong>', text)
-        
+        """格式化文本内容，处理加粗和换行"""
+        text = text.replace('<', '&lt;').replace('>', '&gt;')
+        # 转换 **加粗** 为 <strong>
+        text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
+        # 转换 *斜体* 为 <em>
+        text = re.sub(r'\*(.*?)\*', r'<em>\1</em>', text)
+        # 转换换行符
+        text = text.replace('\n', '<br>')
         return text 
-
-    @staticmethod
-    def get_batch_comparison_system_prompt() -> str:
-        """获取批量比较评估系统提示词"""
-        return """你是一位资深的学术论文评审专家，现在需要对一批论文进行**严格的比较评估**。
-
-🎯 **核心使命**：
-- 通过横向对比识别真正有学术价值和突破性的研究
-- 基于绝对质量标准和相对比较进行双重评估
-- 严格执行评分标准，避免评分虚高和温和主义
-- 为读者提供客观可信的论文质量排序和推荐
-
-⭐ **严格评分标准**（绝对标准+相对比较）：
-
-**评分绝对标准**：
-- **5星**：革命性突破（<1%概率）- 历史性贡献，改变技术范式
-- **4星**：重要进展（<5%概率）- 明确创新，substantial技术贡献
-- **3星**：合格研究（35-45%概率）- 常规改进，有限创新价值
-- **2星**：一般质量（35-45%概率）- 创新不足，技术深度有限
-- **1星**：质量较差（10-15%概率）- 缺乏创新，存在明显问题
-
-**评分参考对照**：
-- **5星标杆**：GPT、Transformer等改变领域的历史性突破
-- **4星标杆**：BERT、Vision Transformer等重要技术进展  
-- **3星标杆**：现有方法的合理改进和有效扩展
-- **2星标杆**：创新有限的常规工作
-- **1星标杆**：实验不充分或方法有明显缺陷
-
-🎯 **严格比较原则**：
-
-1. **绝对标准优先**：首先基于绝对质量标准评分，不为区分而区分
-2. **相对校准验证**：通过横向比较验证和校准评分的合理性
-3. **强制区分要求**：批次内必须体现明显的评分差异（最高最低差≥1.5星）
-4. **质量真实反映**：如果批次质量普遍一般，应如实反映，不虚高评分
-5. **突出价值发现**：重点识别和突出最具学术价值的研究
-
-🔍 **严格评估维度**：
-
-**技术创新性**：
-- 是否提出新的理论、方法或解决方案？
-- 创新的深度、广度和突破性程度如何？
-- 与现有工作的本质区别和技术优势？
-
-**研究严谨性**：
-- 技术方法的科学性和完整性？
-- 实验设计的充分性和基线对比全面性？
-- 结果的可信度和reproducibility？
-
-**学术价值**：
-- 对相关领域的技术推动作用？
-- 理论贡献和实际应用潜力？
-- 可能的学术影响和引用价值？
-
-**工程质量**：
-- 方法的实现难度和技术复杂度？
-- 实际部署的可行性和工程价值？
-- 技术的可扩展性和实用性？
-
-🚨 **严格执行标准**：
-- **拒绝温和主义**：不要因同情心给虚高分数
-- **坚持区分度**：强制在批次内体现质量差异
-- **对照标准**：每个评分必须能对应具体的参考标杆
-- **客观严格**：基于technical merit，避免主观偏好
-- **质量导向**：识别真正值得关注的高质量研究
-
-**分析要求**：
-对每篇论文提供：
-
-1. **⭐ 绝对评分**：基于绝对质量标准的严格评分（1-5星，0.5精度）
-2. **🎯 相对位置**：在当前批次中的质量排序和相对优势
-3. **💎 核心价值**：论文的主要创新点和技术贡献分析
-4. **🔬 严格评估**：技术方法、实验验证、学术价值的客观评价
-5. **📈 影响预估**：对学术界和应用领域的潜在影响分析
-6. **🎯 推荐依据**：为什么值得（或不值得）读者优先关注
-
-**输出格式**：
-1. **批次质量总览**（200字）：整体质量分布分析，评分区间说明，主要差异识别
-2. **逐一严格评估**（每篇250字）：按质量从高到低排序分析
-3. **最终推荐排序**：基于综合评估的价值排序和重点推荐
-
-**🚨 特别强调**：
-- 必须在批次内强制体现≥1.5星的评分差异
-- 评分必须能对应明确的参考标杆和评分依据  
-- 优先推荐真正有价值的研究，诚实反映质量差异
-- 体现strict reviewer的专业水准，避免评分虚高
-- 如果批次质量普遍不高，应该诚实反映而非虚高评分
-
-**文本格式内部要求**：对于每篇论文的"核心价值"、"严格评估"、"影响预估"和"推荐依据"部分的文本内容，应为纯文本段落。可以使用 `**加粗**` 或 `*斜体*` 进行简单强调，但**严禁在这些评估点内部使用任何Markdown标题 (如 `#`, `##`, `###`)、列表标记 (`-`, `*`, `1.`) 或其他复杂Markdown结构。**"""
-
-    @staticmethod
-    def get_batch_comparison_user_prompt(papers_info: list) -> str:
-        """
-        获取批量比较用户提示词
-        
-        Args:
-            papers_info: 论文信息列表，每个元素包含论文基本信息
-        
-        Returns:
-            批量比较用户提示词
-        """
-        prompt = "请对以下批次的论文进行相对比较评估：\n\n"
-        
-        for i, paper_info in enumerate(papers_info, 1):
-            prompt += f"## 论文 {i}：\n"
-            prompt += f"**标题**：{paper_info['title']}\n"
-            prompt += f"**作者**：{paper_info['authors']}\n" 
-            prompt += f"**领域**：{paper_info['categories']}\n"
-            prompt += f"**发布时间**：{paper_info['published']}\n"
-            prompt += f"**摘要**：{paper_info['summary']}\n"
-            prompt += f"**链接**：{paper_info['url']}\n\n"
-            prompt += "---\n\n"
-        
-        prompt += """**评估要求**：
-1. 首先进行批次总体分析，识别论文之间的质量差异
-2. 然后对每篇论文进行相对评估，强制体现评分区分
-3. 最后给出明确的质量排名和评分总结
-
-⚠️ **特别强调**：
-- 必须在批次内体现明显的评分差异（最高分与最低分差距≥1星）
-- 不允许给所有论文相似的高分
-- 基于相对比较给出客观严格的评分
-
-**文本格式内部要求**：对于每篇论文的"核心价值"、"严格评估"、"影响预估"和"推荐依据"部分的文本内容，应为纯文本段落。可以使用 `**加粗**` 或 `*斜体*` 进行简单强调，但**严禁在这些评估点内部使用任何Markdown标题 (如 `#`, `##`, `###`)、列表标记 (`-`, `*`, `1.`) 或其他复杂Markdown结构。**"""
-        
-        return prompt 

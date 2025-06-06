@@ -1,264 +1,211 @@
 #!/usr/bin/env python3
 """
 批量分析协调器
-管理论文批次处理和评分分配
+管理论文批次处理和两阶段分析流程。
 """
 
 import logging
-from typing import Dict, List, Any, Tuple
 import re
-import arxiv
+from collections import defaultdict
+from typing import Dict, Any, List
 
-from .analyzer import DeepSeekAnalyzer
+from src.ai.analyzer import DeepSeekAnalyzer
+from src.config import Config
+from src.db.db_manager import DBManager
+from src.ai.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
 
-class BatchAnalysisCoordinator:
-    """批量分析协调器"""
-    
-    def __init__(self, analyzer: DeepSeekAnalyzer, batch_size: int = 4):
+class BatchCoordinator:
+    """批量分析协调器，负责编排整个分析流程。"""
+
+    def __init__(self, config: Config, db_manager: DBManager, analyzer: DeepSeekAnalyzer):
+        self.config = config
+        self.db_manager = db_manager
         self.analyzer = analyzer
-        self.batch_size = batch_size
-    
-    def analyze_papers_with_comparison(self, papers: List[arxiv.Result]) -> List[Tuple[arxiv.Result, Dict[str, Any]]]:
+
+    def run_batch_analysis(self, papers_to_process: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        使用批量比较方式分析论文
-        
-        Args:
-            papers: 论文列表
-            
-        Returns:
-            (论文, 分析结果) 元组列表
+        运行批量分析。如果启用了两阶段分析，则执行新流程，否则执行旧的直接分析流程。
         """
-        if len(papers) < 2:
-            logger.warning("论文数量不足，使用单独分析模式")
-            return self._analyze_individual_papers(papers)
+        use_stage_analysis = self.config.get('STAGE_ANALYSIS.ENABLED', False)
+
+        if not use_stage_analysis:
+            logger.info("Two-stage analysis is disabled. Running legacy direct batch analysis.")
+            return self._run_legacy_batch_analysis(papers_to_process)
+
+        logger.info("Starting two-stage analysis pipeline.")
+
+        # Stage 1: Sliding Window Ranking
+        papers_with_scores = self._run_stage1_ranking(papers_to_process)
+        if not papers_with_scores:
+            logger.warning("Stage 1 ranking resulted in no papers. Aborting.")
+            return []
+
+        # Stage 2: Filtering and Deep Analysis
+        final_results = self._run_stage2_deep_analysis(papers_with_scores)
         
-        results = []
+        logger.info("Two-stage analysis pipeline finished.")
+        return final_results
+
+    def _run_stage1_ranking(self, all_papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        执行第一阶段：滑动窗口排名。返回带有聚合分数的论文列表。
+        """
+        window_size = self.config.get('STAGE_ANALYSIS.STAGE1.WINDOW_SIZE', 10)
+        step_size = self.config.get('STAGE_ANALYSIS.STAGE1.STEP_SIZE', 5)
         
-        # 按批次处理论文
-        for i in range(0, len(papers), self.batch_size):
-            batch_papers = papers[i:i + self.batch_size]
-            
-            if len(batch_papers) == 1:
-                # 最后一篇论文单独分析
-                logger.info(f"剩余1篇论文，单独分析")
-                individual_result = self._analyze_individual_papers(batch_papers)
-                results.extend(individual_result)
-            else:
-                # 批量比较分析
-                logger.info(f"批次 {i//self.batch_size + 1}: 分析 {len(batch_papers)} 篇论文")
-                batch_results = self._analyze_batch_with_comparison(batch_papers)
-                results.extend(batch_results)
+        if step_size <= 0:
+            logger.error("Sliding window step_size must be positive. Defaulting to 1.")
+            step_size = 1
+
+        logger.info(f"Stage 1: Creating sliding window batches (size: {window_size}, step: {step_size}).")
         
-        return results
-    
-    def _analyze_batch_with_comparison(self, batch_papers: List[arxiv.Result]) -> List[Tuple[arxiv.Result, Dict[str, Any]]]:
-        """对一个批次的论文进行比较分析"""
-        try:
-            # 获取批量分析结果
-            batch_analysis = self.analyzer.analyze_papers_batch(batch_papers, len(batch_papers))
-            
-            if batch_analysis is None:
-                logger.warning("批量分析失败，回退到单独分析")
-                return self._analyze_individual_papers(batch_papers)
-            
-            # 解析批量分析结果，提取每篇论文的评分和分析
-            individual_analyses = self._parse_batch_analysis(
-                batch_analysis['batch_analysis'], 
-                batch_papers
+        paper_chunks = []
+        for i in range(0, len(all_papers), step_size):
+            chunk = all_papers[i : i + window_size]
+            if chunk:
+                # Ensure we don't add chunks that are too small if the last window is tiny
+                # This could happen if len(all_papers) is just over a step boundary
+                if len(paper_chunks) > 0 and len(chunk) < window_size / 2:
+                    # Append to the previous chunk to avoid a very small last batch
+                    paper_chunks[-1].extend(chunk)
+                    break
+                paper_chunks.append(chunk)
+
+        stage1_scores = defaultdict(list)
+        for i, chunk in enumerate(paper_chunks):
+            logger.info(f"Processing chunk {i+1}/{len(paper_chunks)}...")
+            try:
+                ranking_results = self.analyzer.rank_papers_in_batch(chunk)
+                for result in ranking_results:
+                    paper_id = result.get('paper_id')
+                    score = result.get('score')
+                    if paper_id and isinstance(score, (int, float)):
+                        stage1_scores[paper_id].append(float(score))
+            except Exception as e:
+                logger.error(f"Error ranking chunk {i+1}: {e}", exc_info=True)
+
+        final_scores = {paper_id: max(scores) for paper_id, scores in stage1_scores.items() if scores}
+        
+        papers_with_scores = []
+        for paper in all_papers:
+            paper_id = paper.get('paper_id')
+            score = final_scores.get(paper_id)
+            paper['stage1_score'] = score if score is not None else 0.0
+            papers_with_scores.append(paper)
+
+        papers_with_scores.sort(key=lambda p: p.get('stage1_score', 0.0), reverse=True)
+        
+        logger.info(f"Stage 1: Completed ranking for {len(final_scores)} papers.")
+        return papers_with_scores
+
+    def _run_stage2_deep_analysis(self, papers_with_scores: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        执行第二阶段：筛选并对顶尖论文进行深度分析。
+        """
+        promotion_threshold = self.config.get('STAGE_ANALYSIS.STAGE1.PROMOTION_SCORE_THRESHOLD', 3.5)
+        max_to_analyze = self.config.get('STAGE_ANALYSIS.STAGE2.MAX_PAPERS_TO_ANALYZE', 20)
+
+        promoted_papers = [p for p in papers_with_scores if p.get('stage1_score', 0.0) >= promotion_threshold]
+        top_papers_to_analyze = promoted_papers[:max_to_analyze]
+
+        logger.info(f"Stage 2: {len(top_papers_to_analyze)} papers promoted for deep analysis (threshold: >={promotion_threshold}, max: {max_to_analyze}).")
+
+        filtered_out_papers = [p for p in papers_with_scores if p not in top_papers_to_analyze]
+        for paper in filtered_out_papers:
+            self.db_manager.update_paper_analysis(
+                paper_id=paper['paper_id'],
+                analysis_text=f"Filtered out at Stage 1 with score: {paper.get('stage1_score', 0.0):.2f}",
+                quality_score=paper.get('stage1_score', 0.0),
+                html_analysis="<p>This paper was not selected for detailed analysis based on its initial ranking score.</p>",
+                status='filtered'
             )
-            
-            # 组合结果
-            results = []
-            for i, paper in enumerate(batch_papers):
-                if i < len(individual_analyses):
-                    analysis_result = {
-                        'analysis': individual_analyses[i]['analysis'],
-                        'provider': 'deepseek',
-                        'model': self.analyzer.model,
-                        'timestamp': batch_analysis['timestamp'],
-                        'batch_analysis': True,
-                        'batch_size': len(batch_papers),
-                        'paper_rank': individual_analyses[i].get('rank', i + 1),
-                        'relative_score': individual_analyses[i].get('score', 3.0)
-                    }
-                    results.append((paper, analysis_result))
-                else:
-                    # 解析失败时的回退
-                    logger.warning(f"解析论文 {i+1} 失败，使用单独分析")
-                    individual_result = self._analyze_individual_papers([paper])
-                    results.extend(individual_result)
-            
-            return results
-            
-        except Exception as e:
-            logger.error(f"批量分析处理失败: {e}")
-            return self._analyze_individual_papers(batch_papers)
-    
-    def _parse_batch_analysis(self, batch_text: str, papers: List[arxiv.Result]) -> List[Dict[str, Any]]:
-        """
-        解析批量分析结果，提取每篇论文的个人分析
-        
-        Args:
-            batch_text: 批量分析文本
-            papers: 论文列表
-            
-        Returns:
-            每篇论文的分析结果列表
-        """
-        results = []
-        logger.debug(f"Attempting to parse batch_text for {len(papers)} papers. Received batch_text:\\n{batch_text}")
+        if filtered_out_papers:
+            logger.info(f"Updated status for {len(filtered_out_papers)} filtered papers.")
+
+        if not top_papers_to_analyze:
+            return []
 
         try:
-            # 按论文分割文本
-            sections = re.split(r'## 论文 \\d+[:：]|### 论文 \\d+[:：]|论文\\d+[:：]', batch_text)
-            logger.debug(f"Primary split resulted in {len(sections)} sections: {sections}")
+            batch_analysis_text = self.analyzer.analyze_papers_batch(top_papers_to_analyze)
+            parsed_results = self._parse_batch_analysis(batch_analysis_text, top_papers_to_analyze)
             
-            if len(sections) < len(papers): # 通常分割后第一项是空或者引言
-                logger.warning(f"Primary split resulted in insufficient sections ({len(sections)}) for {len(papers)} papers. Attempting alternative split.")
-                # 尝试其他分割方式
-                sections = re.split(r'(?=\\*\\*论文|(?=第\\d+名)|(?=排名第\\d+))', batch_text)
-                logger.debug(f"Alternative split resulted in {len(sections)} sections: {sections}")
-            
-            # 提取评分信息
-            scores = self._extract_scores_from_text(batch_text)
-            ranks = self._extract_ranks_from_text(batch_text)
-            
-            for i, paper in enumerate(papers):
-                analysis_text = ""
-                score = 3.0
-                rank = i + 1
-                
-                # 提取对应论文的分析文本
-                # 通常 sections[0] 是引言或空串，实际分析从 sections[1] 开始对应第一篇论文
-                current_section_index = i + 1 
-                if current_section_index < len(sections):
-                    analysis_text = sections[current_section_index].strip()
-                    logger.debug(f"Paper {i+1} ('{paper.title[:30]}...'): Extracted analysis from sections[{current_section_index}]:\\n'{analysis_text[:200]}...'")
-                elif i < len(sections) and len(sections) == len(papers): # 特殊情况：如果分割结果数量刚好等于论文数，可能没有引言
-                    analysis_text = sections[i].strip()
-                    logger.warning(f"Paper {i+1} ('{paper.title[:30]}...'): Extracted analysis from sections[{i}] (assuming no preamble). Analysis:\\n'{analysis_text[:200]}...'")
-                else:
-                    analysis_text = f"论文{i+1}的分析暂时无法解析 (section index out of bounds or mismatch)"
-                    logger.warning(f"Paper {i+1} ('{paper.title[:30]}...'): Could not find a corresponding section. Assigning placeholder text. sections_len: {len(sections)}, paper_index: {i}")
-                
-                # 从分析文本中提取评分
-                if i < len(scores):
-                    score = scores[i]
-                else:
-                    # 尝试从文本中提取评分
-                    score_match = re.search(r'(\d+\.?\d*)\s*星', analysis_text)
-                    if score_match:
-                        score = float(score_match.group(1))
-                
-                # 提取排名
-                if i < len(ranks):
-                    rank = ranks[i]
-                else:
-                    # 尝试从文本中提取排名
-                    rank_match = re.search(r'第\s*(\d+)\s*名|排名\s*(\d+)', analysis_text)
-                    if rank_match:
-                        rank = int(rank_match.group(1) or rank_match.group(2))
-                
-                results.append({
-                    'analysis': analysis_text,
-                    'score': score,
-                    'rank': rank
-                })
-            
-            # 确保有足够的结果
-            if len(results) < len(papers):
-                logger.warning(f"Number of parsed results ({len(results)}) is less than number of papers ({len(papers)}). Appending placeholders for missing papers.")
-            while len(results) < len(papers):
-                missing_paper_index = len(results)
-                logger.warning(f"Appending placeholder for paper {missing_paper_index + 1} ('{papers[missing_paper_index].title[:30]}...')")
-                results.append({
-                    'analysis': f"论文{missing_paper_index+1}的分析暂时无法解析",
-                    'score': 3.0,
-                    'rank': missing_paper_index + 1
-                })
-            
-            return results[:len(papers)]
-            
+            analyzed_papers_with_details = []
+            for paper in top_papers_to_analyze:
+                paper_id = paper['paper_id']
+                if paper_id in parsed_results:
+                    analysis_content = parsed_results[paper_id]
+                    self.db_manager.update_paper_analysis(
+                        paper_id=paper_id,
+                        analysis_text=analysis_content['raw'],
+                        quality_score=paper.get('stage1_score', 0.0),
+                        html_analysis=analysis_content['html'],
+                        status='analyzed'
+                    )
+                    paper['analysis'] = analysis_content['raw']
+                    paper['html_analysis'] = analysis_content['html']
+                    analyzed_papers_with_details.append(paper)
+            return analyzed_papers_with_details
         except Exception as e:
-            logger.error(f"解析批量分析失败: {e}", exc_info=True)
-            # 回退方案：平均分配
-            return [
-                {
-                    'analysis': f"批量分析解析失败，论文{i+1}需要重新分析",
-                    'score': 3.0,
-                    'rank': i + 1
-                }
-                for i in range(len(papers))
-            ]
-    
-    def _extract_scores_from_text(self, text: str) -> List[float]:
-        """从文本中提取评分"""
-        scores = []
+            logger.error(f"An error occurred during Stage 2 deep analysis: {e}", exc_info=True)
+            return []
+
+    def _run_legacy_batch_analysis(self, papers_to_process: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        原始的、直接的批量分析方法。
+        """
+        batch_size = self.config.get("BATCH_SIZE", 5)
+        paper_chunks = [papers_to_process[i:i + batch_size] for i in range(0, len(papers_to_process), batch_size)]
         
-        # 匹配各种评分格式
-        score_patterns = [
-            r'(\d+\.?\d*)\s*星',
-            r'评分[:：]\s*(\d+\.?\d*)',
-            r'得分[:：]\s*(\d+\.?\d*)',
-            r'分数[:：]\s*(\d+\.?\d*)'
-        ]
-        
-        for pattern in score_patterns:
-            matches = re.findall(pattern, text)
-            if matches:
-                try:
-                    scores = [float(score) for score in matches]
-                    break
-                except ValueError:
-                    continue
-        
-        return scores
-    
-    def _extract_ranks_from_text(self, text: str) -> List[int]:
-        """从文本中提取排名"""
-        ranks = []
-        
-        # 匹配排名格式
-        rank_patterns = [
-            r'第\s*(\d+)\s*名',
-            r'排名\s*(\d+)',
-            r'位次\s*(\d+)'
-        ]
-        
-        for pattern in rank_patterns:
-            matches = re.findall(pattern, text)
-            if matches:
-                try:
-                    ranks = [int(rank) for rank in matches]
-                    break
-                except ValueError:
-                    continue
-        
-        return ranks
-    
-    def _analyze_individual_papers(self, papers: List[arxiv.Result]) -> List[Tuple[arxiv.Result, Dict[str, Any]]]:
-        """单独分析论文（回退方案）"""
-        results = []
-        
-        for paper in papers:
+        all_analyzed_papers = []
+        for chunk in paper_chunks:
             try:
-                analysis_result = self.analyzer.analyze_paper(paper)
-                results.append((paper, analysis_result))
+                logger.info(f"Analyzing a legacy batch of {len(chunk)} papers.")
+                analysis_text = self.analyzer.analyze_papers_batch(chunk)
+                parsed_results = self._parse_batch_analysis(analysis_text, chunk)
+                
+                for paper_id, content in parsed_results.items():
+                    paper = next((p for p in chunk if p['paper_id'] == paper_id), None)
+                    if paper:
+                        self.db_manager.update_paper_analysis(
+                            paper_id=paper_id, analysis_text=content['raw'],
+                            quality_score=None, html_analysis=content['html'], status='analyzed'
+                        )
+                        paper.update(content)
+                        all_analyzed_papers.append(paper)
             except Exception as e:
-                logger.error(f"单独分析论文失败: {paper.title[:50]}... - {e}")
-                # 使用错误分析
-                from .prompts import PromptManager
-                error_analysis = PromptManager.get_error_analysis(str(e))
-                error_result = {
-                    'analysis': error_analysis,
-                    'provider': 'error',
-                    'model': 'fallback',
-                    'timestamp': 0,
-                    'error': True
-                }
-                results.append((paper, error_result))
+                logger.error(f"Error processing legacy batch: {e}", exc_info=True)
+        return all_analyzed_papers
+
+    def _parse_batch_analysis(self, batch_text: str, papers_in_batch: List[Dict[str, Any]]) -> Dict[str, Dict[str, str]]:
+        """
+        解析批量分析文本，返回一个包含每个论文分析结果的字典。
+        """
+        paper_ids = [p['paper_id'] for p in papers_in_batch]
+        results = {}
         
+        if not batch_text or not paper_ids:
+            return results
+
+        split_pattern = r'Paper ID\s*:\s*(' + '|'.join(re.escape(pid) for pid in paper_ids) + ')'
+        parts = re.split(split_pattern, batch_text)
+        
+        if len(parts) < 3:
+            logger.warning(f"Could not split batch analysis text. Text: '{batch_text[:200]}...'")
+            return {}
+
+        for i in range(1, len(parts), 2):
+            paper_id = parts[i]
+            content_with_header = parts[i+1]
+            # The actual analysis content starts after the header part (Title, Abstract, etc.)
+            # A simple way is to find the end of the abstract marker '---'
+            content_parts = re.split(r'---\s*\n', content_with_header, maxsplit=1)
+            raw_content = content_parts[-1].strip()
+            
+            html_analysis = PromptManager.format_analysis_for_html(raw_content)
+            results[paper_id] = {'raw': raw_content, 'html': html_analysis}
+            logger.info(f"Successfully parsed analysis for paper {paper_id}.")
+
         return results 

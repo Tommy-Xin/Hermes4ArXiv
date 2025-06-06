@@ -1,0 +1,79 @@
+# ArXiv Paper Tracker Configuration
+
+# ==============================================================================
+# 论文搜索配置 (Paper Searching Configuration)
+# ==============================================================================
+# 要搜索的ArXiv类别，用逗号分隔
+# 例如: "cs.AI,cs.LG,cs.CL"
+CATEGORIES: "cs.AI,cs.LG,cs.CL"
+
+# 每个类别最多获取的论文数量
+MAX_PAPERS: 50
+
+# 搜索最近几天的论文
+SEARCH_DAYS: 2
+
+# ==============================================================================
+# AI分析配置 (AI Analysis Configuration)
+# ==============================================================================
+# 分析类型: "quick", "comprehensive", "detailed"
+# - quick: 快速摘要，约200-300字，成本最低
+# - comprehensive: 全面分析，约400-600字，平衡性能与成本（默认）
+# - detailed: 详细剖析，约600-900字，成本最高
+ANALYSIS_TYPE: "comprehensive"
+
+# ==============================================================================
+# 性能与API调用配置 (Performance & API Call Configuration)
+# ==============================================================================
+# 是否启用并行处理以加快分析速度
+ENABLE_PARALLEL: true
+
+# 并行处理的最大工作线程数
+# 0 表示根据CPU核心数自动确定
+MAX_WORKERS: 0
+
+# 在并行模式下，每批处理的论文数量
+BATCH_SIZE: 20
+
+# API调用失败时的重试次数
+API_RETRY_TIMES: 3
+
+# 每次API调用之间的延迟（秒）
+API_DELAY: 2
+
+# API调用的超时时间（秒）
+API_TIMEOUT: 60
+
+# ==============================================================================
+# 邮件配置 (Email Configuration)
+# ==============================================================================
+# SMTP端口号，通常为 587 (TLS) 或 465 (SSL)
+SMTP_PORT: 587
+
+# 注意: SMTP服务器、用户名、密码、发件人和收件人等敏感信息
+# 必须作为环境变量或在GitHub Secrets中设置，而不是在此文件中。
+
+# ... existing code ...
+  # (e.g., ['cs.CV', 'cs.LG', 'cs.CL'])
+  TARGET_CATEGORIES: ['cs.CV', 'cs.LG', 'cs.CL', 'cs.AI', 'cs.RO', 'cs.NE', 'cs.MA', 'stat.ML']
+  
+  # Days to look back for recent papers
+  DAYS_TO_CHECK: 2
+
+# New settings for the two-stage analysis process
+STAGE_ANALYSIS:
+  # Enable or disable the two-stage analysis pipeline. 
+  # If false, it will use the old direct batch analysis.
+  ENABLED: true
+
+  # Stage 1: Sliding window ranking
+  STAGE1:
+    WINDOW_SIZE: 10 # How many papers in one ranking batch
+    STEP_SIZE: 5      # How many papers to slide the window by
+    PROMOTION_SCORE_THRESHOLD: 3.5 # Minimum score to pass to Stage 2
+
+  # Stage 2: Deep analysis for top papers
+  STAGE2:
+    # Maximum number of top papers to analyze in detail.
+    # This acts as a cost control mechanism.
+    MAX_PAPERS_TO_ANALYZE: 20 

@@ -169,34 +169,23 @@ jobs:
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         DEEPSEEK_MODEL: ${{ secrets.DEEPSEEK_MODEL || 'deepseek-chat' }}
         
-        # 论文搜索配置 (Align with daily, override for test)
-        CATEGORIES: ${{ secrets.CATEGORIES || 'cs.AI,cs.LG,cs.CL' }}
-        MAX_PAPERS: 3  # Test-specific value
-        SEARCH_DAYS: 1 # Test-specific value
+        # 论文搜索配置 (测试时覆盖config.yml)
+        MAX_PAPERS: 3
+        SEARCH_DAYS: 1
         
-        # 分析配置 (Align with daily)
-        ANALYSIS_TYPE: ${{ secrets.ANALYSIS_TYPE || 'comprehensive' }}
-        
-        # 📧 邮件配置 (Align with daily)
+        # 📧 邮件配置 (从Secrets读取)
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
         
-        # 🔧 可选配置 (Align with daily)
+        # 🔧 仓库URL (由GitHub Actions提供)
         GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         
-        # ⚡ 并行处理配置 (Align with daily, BATCH_SIZE adjusted for test)
-        ENABLE_PARALLEL: ${{ secrets.ENABLE_PARALLEL || 'true' }}
-        MAX_WORKERS: ${{ secrets.MAX_WORKERS || '0' }} 
-        BATCH_SIZE: ${{ secrets.BATCH_SIZE || '3' }} # Adjusted for MAX_PAPERS=3
+        # ⚡ 并行处理配置 (测试时覆盖config.yml)
+        BATCH_SIZE: 3 # 匹配MAX_PAPERS=3
         
-        # API配置 (Align with daily)
-        API_RETRY_TIMES: ${{ secrets.API_RETRY_TIMES || '3' }}
-        API_DELAY: ${{ secrets.API_DELAY || '2' }}
-        API_TIMEOUT: ${{ secrets.API_TIMEOUT || '60' }}
       run: |
         echo "🚀 运行测试分析（少量论文）..."
         cd src && uv run python main.py 

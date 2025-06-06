@@ -88,19 +88,6 @@ ANALYSIS_TYPE=detailed
 2. 确认所有必需的Secrets都已正确添加
 3. 验证API密钥格式和有效性
 
-**分析质量不满意**：
-```bash
-# 调整为更详细的分析
-ANALYSIS_TYPE=detailed
-```
-
-**速度太慢**：
-```bash
-# 启用并行处理
-ENABLE_PARALLEL=true
-MAX_WORKERS=6
-```
-
 ## 📝 最佳实践
 
 ### GitHub Actions配置建议
@@ -114,7 +101,6 @@ MAX_WORKERS=6
 
 **日常使用**（推荐新用户）：
 ```bash
-ANALYSIS_TYPE=comprehensive
 MAX_PAPERS=30
 CATEGORIES=cs.AI,cs.LG,cs.CL
 ENABLE_PARALLEL=true
@@ -132,12 +118,13 @@ MAX_WORKERS=6
 
 **深度分析**（重点论文）：
 ```bash
-ANALYSIS_TYPE=detailed
 MAX_PAPERS=20
 CATEGORIES=cs.AI,cs.LG
 ENABLE_PARALLEL=true
 MAX_WORKERS=2
 ```
+
+不过作者设计了智能化选择，这部分自动即可。
 
 ## 🔗 相关资源
 
