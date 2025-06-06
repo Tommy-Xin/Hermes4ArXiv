@@ -8,15 +8,15 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
+import os
 
 
-def setup_logger(name: str = "arxiv_tracker", level: str = "INFO") -> logging.Logger:
+def setup_logger(name: str = "arxiv_tracker") -> logging.Logger:
     """
     设置日志记录器
 
     Args:
         name: 日志记录器名称
-        level: 日志级别
 
     Returns:
         配置好的日志记录器
@@ -27,8 +27,16 @@ def setup_logger(name: str = "arxiv_tracker", level: str = "INFO") -> logging.Lo
     if logger.handlers:
         return logger
 
-    # 设置日志级别
-    log_level = getattr(logging, level.upper(), logging.INFO)
+    # 从环境变量读取日志级别，默认为 INFO
+    default_log_level = "INFO"
+    log_level_str = os.environ.get("LOG_LEVEL", default_log_level).upper()
+    
+    # 确保转换后的日志级别是有效的logging级别，否则回退到INFO
+    log_level = getattr(logging, log_level_str, None)
+    if not isinstance(log_level, int):
+        print(f"Warning: Invalid LOG_LEVEL '{log_level_str}'. Defaulting to INFO.", file=sys.stderr)
+        log_level = logging.INFO
+        
     logger.setLevel(log_level)
 
     # 创建格式化器
