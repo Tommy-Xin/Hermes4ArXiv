@@ -188,4 +188,4 @@ jobs:
         
       run: |
         echo "🚀 运行测试分析（少量论文）..."
-        uv run python src/main.py 
+        uv run python -m src.main 

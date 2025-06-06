@@ -8,10 +8,6 @@ import sys
 import traceback
 from pathlib import Path
 
-# 将项目根目录添加到Python路径，以确保所有模块都能被正确找到
-# 这使得脚本可以从任何地方可靠地运行
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 from src.data.arxiv_client import ArxivClient
 from src.config import Config
 from src.output.email_sender import EmailSender

@@ -103,7 +103,7 @@ jobs:
         API_TIMEOUT: ${{ secrets.API_TIMEOUT || '60' }}
       run: |
         echo "🚀 开始论文分析..."
-        timeout 2700 uv run python src/main.py
+        timeout 2700 uv run python -m src.main
         echo "✅ 论文分析完成"
     
     # 尝试保存papers缓存，失败不影响主流程
