@@ -108,7 +108,7 @@ class ArxivPaperTracker:
                     papers_dir=self.config.PAPERS_DIR,
                     max_workers=optimal_workers,
                     batch_size=min(len(papers), self.config.BATCH_SIZE),
-                    max_io_workers_factor=int(self.config.get("MAX_IO_WORKERS_FACTOR", "2"))
+                    max_io_workers_factor=int(getattr(self.config, "MAX_IO_WORKERS_FACTOR", "2"))
                 )
                 
                 # 执行并行分析
