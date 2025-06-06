@@ -167,7 +167,7 @@ class DeepSeekAnalyzer:
                         {"role": "user", "content": user_prompt}
                     ],
                     temperature=0.3,  # 更低的温度确保一致性
-                    max_tokens=3000,  # 批量分析需要更多token
+                    max_tokens=10000,  # 增加Token上限以容纳完整的批量分析，避免内容被截断
                     timeout=self.timeout * 2
                 )
                 
