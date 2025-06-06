@@ -1,5 +1,6 @@
 # Hermes4ArXiv - ArXiv论文自动追踪器
 基于 GitHub Actions 的自动化工具，每日追踪和分析 ArXiv 最新论文，通过邮件发送分析报告。
+推荐使用9b0efd5636d0c6aaff1a5873e8ccd049de4ec08c分支。新版过几周维护。
 
 ## 🚀 快速开始
 
