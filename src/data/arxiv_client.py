@@ -51,7 +51,7 @@ class ArxivClient:
         """
         logger.info(f"ArxivClient: Initiating get_recent_papers. search_days = {self.search_days}")
         # 计算日期范围
-        today_utc = datetime.datetime.utcnow()  # 使用 UTC 时间
+        today_utc = datetime.datetime.now(datetime.UTC)  # 使用 timezone-aware UTC 时间
         start_date_utc = today_utc - datetime.timedelta(days=self.search_days)
 
         # 格式化ArXiv查询的日期

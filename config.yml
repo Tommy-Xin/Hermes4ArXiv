@@ -10,8 +10,8 @@ CATEGORIES: "cs.AI,cs.LG,cs.CL"
 # 每个类别最多获取的论文数量
 MAX_PAPERS: 50
 
-# 搜索最近几天的论文
-SEARCH_DAYS: 2
+# 搜索最近几天的论文（建议3-7天，避免周末无新论文）
+SEARCH_DAYS: 5
 
 # ==============================================================================
 # AI分析配置 (AI Analysis Configuration)
