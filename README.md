@@ -25,7 +25,7 @@
 
 📖 **需要自定义配置？** 参见：[高级配置指南](ADVANCED_CONFIG.md)
 🔑 **获取API密钥？**
-- [智谱GLM配置指南](https://open.bigmodel.cn/) - 推荐，更大的上下文窗口
+- [智谱GLM配置指南](https://open.bigmodel.cn/) - 推荐，200K上下文窗口，128K输出tokens
 - [DeepSeek配置指南](docs/setup/DEEPSEEK_SETUP_GUIDE.md) - 备选方案
 
 📧 **邮箱设置问题？** 参见：[Gmail设置指南](docs/setup/GMAIL_SETUP_GUIDE.md)
