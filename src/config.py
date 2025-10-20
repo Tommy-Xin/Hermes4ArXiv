@@ -150,7 +150,7 @@ class Config:
 
         # 显示使用的模型
         if self.GLM_API_KEY:
-            print(f"✅ 配置验证通过！使用智谱GLM模型: {self.GLM_MODEL or 'glm-4-plus'}")
+            print(f"✅ 配置验证通过！使用智谱GLM模型: {self.GLM_MODEL or 'glm-4.6'}")
         else:
             print(f"✅ 配置验证通过！使用DeepSeek模型: {self.DEEPSEEK_MODEL}")
         return True

@@ -53,13 +53,6 @@ SMTP_PORT: 587
 # 注意: SMTP服务器、用户名、密码、发件人和收件人等敏感信息
 # 必须作为环境变量或在GitHub Secrets中设置，而不是在此文件中。
 
-# ... existing code ...
-  # (e.g., ['cs.CV', 'cs.LG', 'cs.CL'])
-  TARGET_CATEGORIES: ['cs.CV', 'cs.LG', 'cs.CL', 'cs.AI', 'cs.RO', 'cs.NE', 'cs.MA', 'stat.ML']
-  
-  # Days to look back for recent papers
-  DAYS_TO_CHECK: 2
-
 # New settings for the two-stage analysis process
 STAGE_ANALYSIS:
   # Enable or disable the two-stage analysis pipeline. 

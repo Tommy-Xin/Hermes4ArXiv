@@ -36,7 +36,7 @@ class DeepSeekAnalyzer:
             # 优先使用智谱GLM
             from zhipuai import ZhipuAI
             logger.info("使用智谱GLM模型进行分析")
-            self.model = config.GLM_MODEL or "glm-4-plus"
+            self.model = config.GLM_MODEL or "glm-4.6"
             self.provider = "glm"
             self.client = ZhipuAI(api_key=config.GLM_API_KEY)
         elif config.DEEPSEEK_API_KEY:
