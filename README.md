@@ -8,7 +8,12 @@
 
 2. **设置必需密钥**：进入 Settings → Secrets and variables → Actions，添加（一条条添加）：
    ```
-   DEEPSEEK_API_KEY=sk-your-api-key        # 必需：DeepSeek API密钥
+   # AI 模型配置（二选一，推荐智谱GLM）
+   GLM_API_KEY=your-glm-api-key            # 推荐：智谱GLM API密钥
+   # 或者
+   DEEPSEEK_API_KEY=sk-your-api-key        # 备选：DeepSeek API密钥
+
+   # 邮件配置
    SMTP_USERNAME=your-email@gmail.com      # 必需：发送邮箱
    SMTP_PASSWORD=your-app-password         # 必需：邮箱授权码
    EMAIL_TO=recipient@gmail.com            # 必需：接收邮箱(支持多人，用","隔开)
@@ -18,15 +23,18 @@
 
 就是这么简单！系统将每日自动分析最新的AI/ML/NLP论文并发送邮件报告。
 
-📖 **需要自定义配置？** 参见：[高级配置指南](ADVANCED_CONFIG.md)  
-🔑 **获取API密钥？** 参见：[DeepSeek配置指南](docs/setup/DEEPSEEK_SETUP_GUIDE.md)  
+📖 **需要自定义配置？** 参见：[高级配置指南](ADVANCED_CONFIG.md)
+🔑 **获取API密钥？**
+- [智谱GLM配置指南](https://open.bigmodel.cn/) - 推荐，更大的上下文窗口
+- [DeepSeek配置指南](docs/setup/DEEPSEEK_SETUP_GUIDE.md) - 备选方案
+
 📧 **邮箱设置问题？** 参见：[Gmail设置指南](docs/setup/GMAIL_SETUP_GUIDE.md)
 
 ## 🔧 主要功能
 
 - **自动论文获取**：每日从 ArXiv 获取AI/ML/NLP领域最新论文
-- **AI 智能分析**：使用 DeepSeek 对论文进行深度分析和质量评估
-- **邮件自动推送**：发送包含分析结果的精美HTML邮件报告
+- **AI 智能分析**：支持智谱GLM-4、DeepSeek等多种AI模型进行深度分析
+- **邮件自动推送**：发送包含分析结果的简洁美观HTML邮件报告
 - **GitHub Actions部署**：完全基于云端，无需本地环境
 
 ## 📊 AI 分析维度
@@ -72,8 +80,10 @@
 - 验证接收邮箱地址正确
 
 **Actions运行失败？**
-- 检查API密钥是否正确设置
-- 确认DeepSeek账户有足够余额
+- 检查AI API密钥是否正确设置（GLM_API_KEY 或 DEEPSEEK_API_KEY）
+- 确认AI服务账户有足够余额
+- 智谱GLM: https://open.bigmodel.cn/
+- DeepSeek: https://platform.deepseek.com/
 - 查看Actions运行日志了解具体错误
 
 **想要更多自定义？**
