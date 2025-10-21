@@ -151,7 +151,7 @@ class Config:
 
         # 显示使用的模型
         if self.QWEN_API_KEY:
-            print(f"✅ 配置验证通过！使用Qwen模型: {self.QWEN_MODEL or 'qwen-max'}")
+            print(f"✅ 配置验证通过！使用Qwen模型: {self.QWEN_MODEL or 'qwen3-max'}")
         elif self.GLM_API_KEY:
             print(f"✅ 配置验证通过！使用智谱GLM模型: {self.GLM_MODEL or 'glm-4.6'}")
         else:
