@@ -8,7 +8,9 @@
 
 2. **设置必需密钥**：进入 Settings → Secrets and variables → Actions，添加（一条条添加）：
    ```
-   # AI 模型配置（二选一，推荐智谱GLM）
+   # AI 模型配置（三选一，推荐Qwen）
+   QWEN_API_KEY=your-qwen-api-key            # 推荐：阿里云通义千问API密钥
+   # 或者
    GLM_API_KEY=your-glm-api-key            # 推荐：智谱GLM API密钥
    # 或者
    DEEPSEEK_API_KEY=sk-your-api-key        # 备选：DeepSeek API密钥
@@ -25,6 +27,7 @@
 
 📖 **需要自定义配置？** 参见：[高级配置指南](ADVANCED_CONFIG.md)
 🔑 **获取API密钥？**
+- [Qwen配置指南](https://www.aliyun.com/product/dashscope) - 推荐，阿里云通义千问，成本低，性能好
 - [智谱GLM配置指南](https://open.bigmodel.cn/) - 推荐，200K上下文窗口，128K输出tokens
 - [DeepSeek配置指南](docs/setup/DEEPSEEK_SETUP_GUIDE.md) - 备选方案
 
@@ -33,7 +36,7 @@
 ## 🔧 主要功能
 
 - **自动论文获取**：每日从 ArXiv 获取AI/ML/NLP领域最新论文
-- **AI 智能分析**：支持智谱GLM-4、DeepSeek等多种AI模型进行深度分析
+- **AI 智能分析**：支持阿里云通义千问、智谱GLM-4、DeepSeek等多种AI模型进行深度分析
 - **邮件自动推送**：发送包含分析结果的简洁美观HTML邮件报告
 - **GitHub Actions部署**：完全基于云端，无需本地环境
 
@@ -80,8 +83,9 @@
 - 验证接收邮箱地址正确
 
 **Actions运行失败？**
-- 检查AI API密钥是否正确设置（GLM_API_KEY 或 DEEPSEEK_API_KEY）
+- 检查AI API密钥是否正确设置（QWEN_API_KEY、GLM_API_KEY 或 DEEPSEEK_API_KEY）
 - 确认AI服务账户有足够余额
+- Qwen: https://www.aliyun.com/product/dashscope
 - 智谱GLM: https://open.bigmodel.cn/
 - DeepSeek: https://platform.deepseek.com/
 - 查看Actions运行日志了解具体错误
@@ -94,6 +98,7 @@
 ## 📚 详细文档
 
 - [高级配置指南](ADVANCED_CONFIG.md) - 自定义分析类型、论文数量等
+- [Qwen API配置](docs/setup/QWEN_SETUP_GUIDE.md) - 通义千问API密钥申请和配置
 - [DeepSeek API配置](docs/setup/DEEPSEEK_SETUP_GUIDE.md) - API密钥申请和配置
 - [Gmail邮箱设置](docs/setup/GMAIL_SETUP_GUIDE.md) - 邮箱授权码设置
 

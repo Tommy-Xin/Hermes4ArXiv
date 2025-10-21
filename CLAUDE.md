@@ -164,7 +164,10 @@ uv run pytest
 必须在 GitHub Secrets 或 `.env` 文件中设置：
 
 ```bash
-# AI 模型（至少配置一个，GLM 优先）
+# AI 模型（至少配置一个，Qwen 优先）
+QWEN_API_KEY=your-qwen-api-key         # 推荐：阿里云通义千问API
+QWEN_MODEL=qwen-max                    # 可选，默认 qwen-max
+# 或者
 GLM_API_KEY=your-glm-api-key           # 推荐：智谱GLM-4.6
 GLM_MODEL=glm-4.6                      # 可选，默认 glm-4.6
 # 或者

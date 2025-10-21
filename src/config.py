@@ -65,6 +65,7 @@ class Config:
 
         # 也包括那些可能不在YAML中但可以通过env设置的敏感键
         sensitive_keys = [
+            "QWEN_API_KEY", "QWEN_MODEL",
             "DEEPSEEK_API_KEY", "DEEPSEEK_MODEL",
             "GLM_API_KEY", "GLM_MODEL",
             "SMTP_SERVER", "SMTP_USERNAME", "SMTP_PASSWORD",
@@ -133,8 +134,8 @@ class Config:
     def validate(self) -> bool:
         """验证配置是否完整"""
         # 检查AI API密钥（至少需要一个）
-        if not self.GLM_API_KEY and not self.DEEPSEEK_API_KEY:
-            print("❌ 未配置AI API密钥，请配置 GLM_API_KEY 或 DEEPSEEK_API_KEY")
+        if not self.GLM_API_KEY and not self.DEEPSEEK_API_KEY and not self.QWEN_API_KEY:
+            print("❌ 未配置AI API密钥，请配置 QWEN_API_KEY、GLM_API_KEY 或 DEEPSEEK_API_KEY")
             return False
 
         required_email_configs = [
@@ -149,7 +150,9 @@ class Config:
             return False
 
         # 显示使用的模型
-        if self.GLM_API_KEY:
+        if self.QWEN_API_KEY:
+            print(f"✅ 配置验证通过！使用Qwen模型: {self.QWEN_MODEL or 'qwen-max'}")
+        elif self.GLM_API_KEY:
             print(f"✅ 配置验证通过！使用智谱GLM模型: {self.GLM_MODEL or 'glm-4.6'}")
         else:
             print(f"✅ 配置验证通过！使用DeepSeek模型: {self.DEEPSEEK_MODEL}")

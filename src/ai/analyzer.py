@@ -32,8 +32,17 @@ class DeepSeekAnalyzer:
         self.timeout = config.API_TIMEOUT
 
         # 自动检测使用哪个API
-        if config.GLM_API_KEY:
-            # 优先使用智谱GLM
+        if config.QWEN_API_KEY:
+            # 优先使用Qwen
+            logger.info("使用Qwen模型进行分析")
+            self.model = config.QWEN_MODEL or "qwen-max"
+            self.provider = "qwen"
+            self.client = openai.OpenAI(
+                api_key=config.QWEN_API_KEY,
+                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+            )
+        elif config.GLM_API_KEY:
+            # 使用智谱GLM（次优选择）
             from zhipuai import ZhipuAI
             logger.info("使用智谱GLM模型进行分析")
             self.model = config.GLM_MODEL or "glm-4.6"
@@ -49,7 +58,7 @@ class DeepSeekAnalyzer:
                 base_url="https://api.deepseek.com/v1"
             )
         else:
-            raise ValueError("未找到有效的API密钥。请配置 GLM_API_KEY 或 DEEPSEEK_API_KEY")
+            raise ValueError("未找到有效的API密钥。请配置 QWEN_API_KEY、GLM_API_KEY 或 DEEPSEEK_API_KEY")
 
     def _create_completion(self, messages: List[Dict[str, str]], max_tokens: int, temperature: float, **kwargs) -> str:
         """
@@ -65,7 +74,7 @@ class DeepSeekAnalyzer:
                     temperature=temperature
                 )
             else:
-                # DeepSeek支持完整的OpenAI参数
+                # Qwen和DeepSeek都支持完整的OpenAI参数
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
