@@ -166,7 +166,7 @@ uv run pytest
 ```bash
 # AI 模型（至少配置一个，Qwen 优先）
 QWEN_API_KEY=your-qwen-api-key         # 推荐：阿里云通义千问API
-QWEN_MODEL=qwen-max                    # 可选，默认 qwen-max
+QWEN_MODEL=qwen3-max                   # 可选，默认 qwen3-max
 # 或者
 GLM_API_KEY=your-glm-api-key           # 推荐：智谱GLM-4.6
 GLM_MODEL=glm-4.6                      # 可选，默认 glm-4.6

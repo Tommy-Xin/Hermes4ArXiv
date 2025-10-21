@@ -27,13 +27,13 @@
 
 ```
 QWEN_API_KEY=your-qwen-api-key
-QWEN_MODEL=qwen-max                    # 可选，默认为qwen-max
+QWEN_MODEL=qwen3-max                   # 可选，默认为qwen3-max
 ```
 
 ## 5. API使用建议
 
 ### 推荐的模型：
-- `qwen-max`：适用于复杂、多步骤的任务
+- `qwen3-max`：适用于复杂、多步骤的任务
 - `qwen-plus`：在效果和成本之间取得平衡
 - `qwen-turbo`：适用于简单、快速的任务
 

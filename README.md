@@ -10,6 +10,7 @@
    ```
    # AI 模型配置（三选一，推荐Qwen）
    QWEN_API_KEY=your-qwen-api-key            # 推荐：阿里云通义千问API密钥
+   QWEN_MODEL=qwen3-max                      # 可选：模型名称，默认为qwen3-max
    # 或者
    GLM_API_KEY=your-glm-api-key            # 推荐：智谱GLM API密钥
    # 或者

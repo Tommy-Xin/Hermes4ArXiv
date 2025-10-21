@@ -35,7 +35,7 @@ class DeepSeekAnalyzer:
         if config.QWEN_API_KEY:
             # 优先使用Qwen
             logger.info("使用Qwen模型进行分析")
-            self.model = config.QWEN_MODEL or "qwen-max"
+            self.model = config.QWEN_MODEL or "qwen3-max"
             self.provider = "qwen"
             self.client = openai.OpenAI(
                 api_key=config.QWEN_API_KEY,

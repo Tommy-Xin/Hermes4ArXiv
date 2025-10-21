@@ -64,7 +64,7 @@ MAX_WORKERS=2
 ```bash
 # 基础配置
 QWEN_API_KEY=your-qwen-api-key      # 必需，阿里云通义千问API密钥
-QWEN_MODEL=qwen-max                 # 可选，默认值，可选：qwen-max, qwen-plus, qwen-turbo
+QWEN_MODEL=qwen3-max                # 可选，默认值，可选：qwen3-max, qwen-plus, qwen-turbo
 
 # API 调用优化
 API_RETRY_TIMES=3                   # 重试次数
