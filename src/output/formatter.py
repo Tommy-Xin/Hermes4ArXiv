@@ -424,6 +424,16 @@ class OutputFormatter:
         except Exception as e:
             logger.error(f"保存文件失败 {file_path}: {e}")
 
+    def get_email_subject(self) -> str:
+        """
+        生成邮件主题
+
+        Returns:
+            邮件主题字符串
+        """
+        today = datetime.datetime.now().strftime("%Y年%m月%d日")
+        return f"🏛️ Hermes4ArXiv - {today} AI论文分析报告"
+
     def create_summary_stats(
         self, papers_analyses: List[Tuple[arxiv.Result, Dict[str, Any]]]
     ) -> Dict[str, Any]:

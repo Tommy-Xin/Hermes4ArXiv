@@ -86,7 +86,7 @@ class Config:
         self.PAPERS_DIR = self.BASE_DIR / "storage" / "papers"
         self.CONCLUSION_FILE = self.BASE_DIR / "storage" / "conclusion.md"
         self.HTML_REPORT_FILE = self.BASE_DIR / "storage" / "report.html"
-        self.TEMPLATES_DIR = self.BASE_DIR / "output" / "templates"
+        self.TEMPLATES_DIR = self.BASE_DIR / "src" / "output" / "templates"
         self.DB_PATH = self.BASE_DIR / "storage" / "papers.db"
         self.LOGS_DIR = self.BASE_DIR / "storage" / "logs"
 
