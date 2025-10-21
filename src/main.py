@@ -17,6 +17,49 @@ from src.ai.batch_coordinator import BatchCoordinator
 from src.utils.logger import logger
 
 
+def arxiv_result_to_dict(paper) -> dict:
+    """
+    Convert arxiv.Result object to dictionary format
+
+    Args:
+        paper: arxiv.Result object
+
+    Returns:
+        Dictionary with paper information
+    """
+    # Get author names safely
+    author_names = []
+    if hasattr(paper, 'authors') and paper.authors:
+        try:
+            author_names = [author.name for author in paper.authors]
+        except AttributeError:
+            logger.warning(f"Abnormal author object structure for paper: {paper.title}")
+
+    # Get published date safely
+    published_date = None
+    if hasattr(paper, 'published') and paper.published:
+        published_date = paper.published
+
+    # Get PDF URL safely
+    pdf_url = None
+    if hasattr(paper, 'pdf_url'):
+        pdf_url = paper.pdf_url
+    else:
+        # Derive PDF URL from entry_id
+        pdf_url = paper.entry_id.replace('/abs/', '/pdf/') + '.pdf'
+
+    return {
+        'title': paper.title,
+        'authors': author_names,
+        'categories': paper.categories,
+        'published': published_date,
+        'entry_id': paper.entry_id,
+        'summary': paper.summary,
+        'pdf_url': pdf_url,
+        'paper_id': paper.get_short_id()
+    }
+
+
 class ArxivPaperTracker:
     """ArXiv论文追踪器主类"""
 
@@ -77,7 +120,7 @@ class ArxivPaperTracker:
             logger.info(f"成功从ArXiv获取 {len(new_papers)} 篇论文。")
 
             # 将arxiv.Result对象和其字典形式一起准备，以供后续使用
-            papers_for_analysis = [(p, p.to_dict()) for p in new_papers]
+            papers_for_analysis = [(p, arxiv_result_to_dict(p)) for p in new_papers]
 
             # 2. 使用BatchCoordinator进行分析
             # BatchCoordinator现在接收(arxiv.Result, dict)的元组列表

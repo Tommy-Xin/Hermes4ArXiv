@@ -137,51 +137,67 @@ class BatchCoordinator:
             logger.info("No papers met the threshold for deep analysis.")
             return []
 
-        # 并行提取全文
-        papers_for_deep_analysis = []
-        max_io_workers = self.config.MAX_WORKERS if self.config.MAX_WORKERS > 0 else None # Use None for default
-        logger.info(f"Extracting full text for {len(top_papers_to_analyze_tuples)} papers in parallel using up to {max_io_workers or 'default'} workers...")
+        # 并行提取全文并进行分析（逐篇并行）
+        max_workers = self.config.MAX_WORKERS if self.config.MAX_WORKERS > 0 else None
+        logger.info(f"Extracting full text and analyzing {len(top_papers_to_analyze_tuples)} papers in parallel using up to {max_workers or 'default'} workers...")
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_io_workers) as executor:
-            future_to_paper_tuple = {
-                executor.submit(self.arxiv_client.get_full_text, arxiv_res, self.config.PAPERS_DIR): (arxiv_res, paper_dict)
+        analyzed_papers_with_details = []
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # 为每篇论文提交一个完整的任务（提取全文 + 分析）
+            future_to_paper = {
+                executor.submit(self._analyze_single_paper, arxiv_res, paper_dict): paper_dict
                 for arxiv_res, paper_dict in top_papers_to_analyze_tuples
             }
 
-            for future in concurrent.futures.as_completed(future_to_paper_tuple):
-                _, paper_dict = future_to_paper_tuple[future]
+            for future in concurrent.futures.as_completed(future_to_paper):
+                paper_dict = future_to_paper[future]
                 try:
-                    full_text = future.result()
-                    if full_text:
-                        paper_dict['full_text'] = full_text
-                    else:
-                        logger.warning(f"Could not extract full text for {paper_dict['paper_id']}. Falling back to abstract.")
+                    analyzed_paper = future.result()
+                    if analyzed_paper:
+                        analyzed_papers_with_details.append(analyzed_paper)
+                        logger.info(f"Successfully analyzed paper {analyzed_paper['paper_id']}")
                 except Exception as e:
-                    logger.error(f"Error processing full text future for {paper_dict['paper_id']}: {e}", exc_info=True)
-                finally:
-                    # 无论成功与否，都将论文加入下一步处理列表
-                    papers_for_deep_analysis.append(paper_dict)
+                    logger.error(f"Failed to analyze paper {paper_dict['paper_id']}: {e}", exc_info=True)
 
+        logger.info(f"Stage 2 completed: {len(analyzed_papers_with_details)}/{len(top_papers_to_analyze_tuples)} papers successfully analyzed")
+        return analyzed_papers_with_details
+
+    def _analyze_single_paper(self, arxiv_res: arxiv.Result, paper_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        分析单篇论文（提取全文 + AI分析）
+        这个方法在 ThreadPoolExecutor 中并行运行
+        """
+        paper_id = paper_dict.get('paper_id', 'unknown')
+
+        # 步骤1：提取全文
         try:
-            batch_analysis_text = self.analyzer.analyze_papers_batch(papers_for_deep_analysis)
-            parsed_results = self._parse_batch_analysis(batch_analysis_text, papers_for_deep_analysis)
-            
-            analyzed_papers_with_details = []
-            for paper in papers_for_deep_analysis:
-                paper_id = paper.get('paper_id')
-                if paper_id in parsed_results:
-                    analysis_content = parsed_results[paper_id]
-                    # 将分析结果直接附加到论文数据字典中
-                    paper['analysis'] = analysis_content['raw']
-                    paper['html_analysis'] = analysis_content['html']
-                    analyzed_papers_with_details.append(paper)
-            
-            # 返回包含完整分析的论文列表
-            return analyzed_papers_with_details
-            
+            full_text = self.arxiv_client.get_full_text(arxiv_res, self.config.PAPERS_DIR)
+            if full_text:
+                paper_dict['full_text'] = full_text
+                logger.debug(f"Extracted full text for {paper_id}")
+            else:
+                logger.warning(f"Could not extract full text for {paper_id}, using abstract only")
         except Exception as e:
-            logger.error(f"An error occurred during Stage 2 deep analysis: {e}", exc_info=True)
-            return []
+            logger.error(f"Error extracting full text for {paper_id}: {e}", exc_info=True)
+
+        # 步骤2：AI 分析
+        try:
+            analysis_text = self.analyzer.analyze_paper(paper_dict)
+
+            # 格式化为 HTML
+            from .prompts import PromptManager
+            html_analysis = PromptManager.format_analysis_for_html(analysis_text)
+
+            # 附加分析结果
+            paper_dict['analysis'] = analysis_text
+            paper_dict['html_analysis'] = html_analysis
+
+            return paper_dict
+
+        except Exception as e:
+            logger.error(f"Error analyzing paper {paper_id}: {e}", exc_info=True)
+            return None
 
     def _run_legacy_batch_analysis(self, papers_to_process: List[Tuple[arxiv.Result, Dict[str, Any]]]) -> List[Dict[str, Any]]:
         """
