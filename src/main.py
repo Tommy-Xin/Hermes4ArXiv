@@ -198,7 +198,7 @@ class ArxivPaperTracker:
             subject = self.output_formatter.get_email_subject()
             
             self.email_sender.send_email(
-                to_email=self.config.EMAIL_TO,
+                to_emails=self.config.EMAIL_TO,
                 subject=subject,
                 html_content=html_content
             )
