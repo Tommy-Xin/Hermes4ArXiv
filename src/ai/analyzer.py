@@ -217,15 +217,18 @@ class DeepSeekAnalyzer:
 请基于以上信息，按照系统提示的结构进行深度分析。"""
 
         if self.provider == "glm":
+            # 智谱GLM不支持response_format参数
             return self._create_completion(
                 messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 max_tokens=2000,
                 temperature=0.7
             )
         else:
+            # Qwen和DeepSeek支持response_format参数，以获得更结构化的输出
             return self._create_completion(
                 messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 max_tokens=2000,
                 temperature=0.7,
+                response_format={"type": "text"},  # 使用text格式以保持现有格式，如需严格JSON可改为{"type": "json_object"}
                 timeout=self.timeout
             ) 
