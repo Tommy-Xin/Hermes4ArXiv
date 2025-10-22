@@ -184,7 +184,25 @@ class DeepSeekAnalyzer:
         logger.info(f"Performing single paper analysis for: {paper.get('title', 'N/A')} using {self.provider}.")
         system_prompt = PromptManager.get_system_prompt()
 
-        # 直接从字典构建Prompt，以适应数据库记录的格式
+        # 检查是否提供了全文，如果是，则优先使用全文进行分析
+        content_to_analyze = paper.get('full_text') or paper.get('abstract', '摘要不可用')
+        
+        # 为内容设定一个安全的最大token数，为其他提示词部分留出余量
+        # 根据不同模型的上下文窗口适当调整
+        MAX_CONTENT_TOKENS = 20000  # 增加到20000 tokens，为系统提示词和输出留出充足空间
+        from .prompts import PromptManager
+        tokenizer = PromptManager._get_tokenizer()
+
+        # 使用tokenizer进行精确截断
+        if tokenizer and content_to_analyze:
+            tokens = tokenizer.encode(content_to_analyze)
+            if len(tokens) > MAX_CONTENT_TOKENS:
+                truncated_tokens = tokens[:MAX_CONTENT_TOKENS]
+                content_to_analyze = tokenizer.decode(truncated_tokens, errors='ignore') + "\n... (内容已截断)"
+        elif content_to_analyze and len(content_to_analyze) > 80000:  # 如果tokenizer加载失败，回退到基于字符的截断
+            content_to_analyze = content_to_analyze[:80000] + "\n... (内容已截断)"
+
+        # 构建用户提示词，优先使用全文内容
         user_prompt = f"""请分析以下ArXiv论文：
 📄 **论文标题**：{paper.get('title', '未知标题')}
 👥 **作者信息**：{paper.get('authors', '未知作者')}
@@ -192,6 +210,8 @@ class DeepSeekAnalyzer:
 📅 **发布时间**：{paper.get('published_date', '未知日期')}
 📝 **论文摘要**：{paper.get('abstract', '摘要不可用')}
 🔗 **论文链接**：https://arxiv.org/abs/{paper.get('paper_id', '')}
+---
+📄 **论文内容**：{content_to_analyze}
 ---
 请基于以上信息，按照系统提示的结构进行深度分析。"""
 
