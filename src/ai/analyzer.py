@@ -181,6 +181,8 @@ class DeepSeekAnalyzer:
         对单篇论文进行深入分析 (用于后备或单次运行).
         返回包含分析结果的字符串。
         """
+        from .prompts import PromptManager  # 局部导入以避免作用域问题
+        
         logger.info(f"Performing single paper analysis for: {paper.get('title', 'N/A')} using {self.provider}.")
         system_prompt = PromptManager.get_system_prompt()
 
@@ -190,7 +192,6 @@ class DeepSeekAnalyzer:
         # 为内容设定一个安全的最大token数，为其他提示词部分留出余量
         # 根据不同模型的上下文窗口适当调整
         MAX_CONTENT_TOKENS = 20000  # 增加到20000 tokens，为系统提示词和输出留出充足空间
-        from .prompts import PromptManager
         tokenizer = PromptManager._get_tokenizer()
 
         # 使用tokenizer进行精确截断
