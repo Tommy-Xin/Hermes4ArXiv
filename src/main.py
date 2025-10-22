@@ -200,7 +200,7 @@ class ArxivPaperTracker:
             self.email_sender.send_email(
                 to_emails=self.config.EMAIL_TO,
                 subject=subject,
-                html_content=html_content
+                content=html_content
             )
             logger.info(f"邮件报告已成功发送至 {', '.join(self.config.EMAIL_TO)}")
         except Exception as e:
