@@ -78,10 +78,14 @@ jobs:
     - name: Run paper analysis with timeout
       timeout-minutes: 45  # 为主要任务设置独立超时
       env:
-        # DeepSeek AI 配置
+        # 🤖 AI 配置 - 优先使用Qwen，其次智谱GLM，最后DeepSeek
+        QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+        QWEN_MODEL: ${{ secrets.QWEN_MODEL || 'qwen3-max' }}
+        GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+        GLM_MODEL: ${{ secrets.GLM_MODEL || 'glm-4.6' }}
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         DEEPSEEK_MODEL: ${{ secrets.DEEPSEEK_MODEL || 'deepseek-chat' }}
-        
+
         # 📧 邮件配置 - 敏感信息保留在Secrets中
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
